@@ -20,8 +20,15 @@
         .card.is-flipped { transform: rotateY(180deg); }
         .card-face { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; background: var(--card-bg); border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
         .card-back { transform: rotateY(180deg); }
-        .word-en { font-size: 36px; font-weight: bold; color: var(--text-main); margin-bottom: 10px; }
-        .word-zh { font-size: 24px; color: var(--primary); margin-bottom: 15px; }
+        
+        /* 单词与发音按钮的排版 */
+        .word-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px; }
+        .word-en { font-size: 36px; font-weight: bold; color: var(--text-main); }
+        .play-btn { background: none; border: none; font-size: 28px; cursor: pointer; padding: 0; transition: transform 0.1s; }
+        .play-btn:active { transform: scale(0.9); }
+        .word-phonetic { font-size: 18px; color: var(--primary); margin-bottom: 15px; font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif; }
+        
+        .word-zh { font-size: 24px; color: var(--text-main); margin-bottom: 15px; }
         .word-sub { font-size: 16px; color: var(--text-sub); line-height: 1.5; }
         .tap-hint { position: absolute; bottom: 20px; font-size: 14px; color: #C7C7CC; }
 
@@ -31,14 +38,13 @@
         .btn-remember { background-color: var(--success); }
         .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        #progress { margin-top: 20px; color: var(--text-sub); font-size: 14px; display: none; }
+        #progress { margin-top: 20px; color: var(--text-sub); font-size: 15px; display: none; font-weight: bold; }
         #loading { display: none; margin-top: 50px; color: var(--primary); font-weight: bold; }
     </style>
 </head>
 <body>
 
     <h1>🚀 云端单词卡</h1>
-
     <div id="loading">正在连接 Notion 获取数据...</div>
 
     <div id="dashboard" style="display: none;">
@@ -51,17 +57,29 @@
 
     <div id="flashcard-container">
         <div class="card" id="card">
+            <!-- 卡片正面 -->
             <div class="card-face card-front">
-                <div class="word-en" id="front-en"></div>
-                <div class="tap-hint">点击翻看释义</div>
+                <div class="word-header">
+                    <div class="word-en" id="front-en"></div>
+                    <button class="play-btn" onclick="playVoice(event)">🔊</button>
+                </div>
+                <div class="word-phonetic" id="front-phonetic"></div>
+                <div class="tap-hint">点击卡片翻看释义</div>
             </div>
+            <!-- 卡片背面 -->
             <div class="card-face card-back">
-                <div class="word-en" id="back-en"></div>
+                <div class="word-header">
+                    <div class="word-en" id="back-en"></div>
+                    <button class="play-btn" onclick="playVoice(event)">🔊</button>
+                </div>
+                <div class="word-phonetic" id="back-phonetic"></div>
                 <div class="word-zh" id="back-zh"></div>
                 <div class="word-sub" id="back-sub"></div>
             </div>
         </div>
     </div>
+    
+    <!-- 进度条 -->
     <div id="progress"></div>
 
     <div id="action-buttons">
@@ -74,11 +92,14 @@
     let dueList = [];
     let currentIndex = 0;
     let isFlipped = false;
+    
+    // 进度计数器
+    let initialTotal = 0;   // 今天的总任务数（不会变）
+    let masteredCount = 0;  // 已经记住的个数
 
     window.onload = async () => {
         document.getElementById('loading').style.display = 'block';
         try {
-            // 注意：这里改成了 Netlify 的请求路径
             const res = await fetch('/.netlify/functions/get_words');
             dueList = await res.json();
             
@@ -97,15 +118,32 @@
 
     document.getElementById('start-btn').addEventListener('click', () => {
         if(dueList.length === 0) return;
+        
+        // 记录今天的总任务数
+        initialTotal = dueList.length;
+        masteredCount = 0;
+
+        // 随机打乱单词顺序
         for (let i = dueList.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [dueList[i], dueList[j]] = [dueList[j], dueList[i]];
         }
+        
         document.getElementById('dashboard').style.display = 'none';
         document.getElementById('flashcard-container').style.display = 'block';
         document.getElementById('progress').style.display = 'block';
         showCard();
     });
+
+    // 播放发音
+    function playVoice(e) {
+        if (e) e.stopPropagation(); // 阻止点击喇叭时触发卡片翻转
+        const word = dueList[currentIndex];
+        if (!word) return;
+        // 调用有道词典美音 API (type=2)
+        const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
+        audio.play();
+    }
 
     function showCard() {
         if (currentIndex >= dueList.length) {
@@ -120,11 +158,21 @@
         }
 
         const word = dueList[currentIndex];
+        
+        // 填充内容
         document.getElementById('front-en').innerText = word.en;
         document.getElementById('back-en').innerText = word.en;
+        
+        // 如果有音标则加上括号 [ ]
+        const phoneticStr = word.phonetic ? `[${word.phonetic}]` : "";
+        document.getElementById('front-phonetic').innerText = phoneticStr;
+        document.getElementById('back-phonetic').innerText = phoneticStr;
+        
         document.getElementById('back-zh').innerText = word.zh;
         document.getElementById('back-sub').innerText = word.sub;
-        document.getElementById('progress').innerText = `进度: ${currentIndex + 1} / ${dueList.length}`;
+        
+        // 更新全新的进度条逻辑
+        document.getElementById('progress').innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
         
         const card = document.getElementById('card');
         card.classList.remove('is-flipped');
@@ -135,6 +183,9 @@
         document.getElementById('btn-remember').disabled = false;
         document.getElementById('btn-forgot').innerText = "忘记了 🔴";
         document.getElementById('btn-remember').innerText = "记住了 🟢";
+
+        // 显示新卡片时，自动朗读发音！
+        playVoice();
     }
 
     document.getElementById('card').addEventListener('click', () => {
@@ -147,28 +198,26 @@
     async function handleAnswer(isRemembered) {
         const word = dueList[currentIndex];
         
-        // 锁定按钮，防止重复点击
         document.getElementById('btn-forgot').disabled = true;
         document.getElementById('btn-remember').disabled = true;
-        if(isRemembered) document.getElementById('btn-remember').innerText = "保存中...";
-        else document.getElementById('btn-forgot').innerText = "保存中...";
-
+        
         let newLevel;
         if (isRemembered) {
-            // 记住了：等级提升
+            document.getElementById('btn-remember').innerText = "保存中...";
             newLevel = Math.min(word.level + 1, INTERVALS.length - 1);
+            masteredCount++; // 【修复】只有真正记住了，掌握进度才 +1
         } else {
-            // 忘记了：等级打回原形
+            document.getElementById('btn-forgot').innerText = "保存中...";
             newLevel = 0;
-            // 【核心修复】：将这个忘记的单词克隆一份，把新等级设为 0，然后塞回队列末尾！
-            dueList.push({ ...word, level: 0 });
+            // 【修复】忘记了的单词塞回队尾，等会儿继续复习
+            dueList.push({ ...word, level: 0 }); 
         }
 
         const daysToAdd = INTERVALS[newLevel];
         const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
         const nextReviewDate = nextDate.toISOString().split('T')[0];
 
-        // 提交云端更新 Notion
+        // 提交云端
         await fetch('/.netlify/functions/update_word', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -179,7 +228,6 @@
             })
         });
 
-        // 进入下一张卡片
         currentIndex++;
         showCard();
     }
