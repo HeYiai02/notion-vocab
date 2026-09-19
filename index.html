@@ -25,7 +25,56 @@
             min-height: 100vh;
             box-sizing: border-box;
             overflow-x: hidden;
+            position: relative;
         }
+        
+        /* 右上角快捷滑动开关 */
+        .top-bar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-sub);
+            z-index: 100;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #E5E5EA;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        input:checked + .slider {
+            background-color: var(--success);
+        }
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
         h1 {
             color: var(--text-main);
             font-size: 24px;
@@ -81,7 +130,6 @@
             align-items: center;
         }
 
-        /* 3D 卡片层叠堆叠容器 */
         .card-stack {
             position: relative;
             width: 100%;
@@ -104,13 +152,12 @@
             will-change: transform, opacity, filter;
         }
 
-        /* 底层预览卡片 */
         .card-next {
             z-index: 1;
             transform: scale(0.92) translateY(15px);
             opacity: 0.6;
             filter: blur(1px);
-            transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+            transition: transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -119,7 +166,6 @@
             text-align: center;
         }
 
-        /* 顶层可拖拽卡片 */
         .card-current {
             z-index: 2;
             cursor: grab;
@@ -130,7 +176,6 @@
             cursor: grabbing;
         }
 
-        /* 卡片翻转 3D 容器 */
         .card-inner {
             position: relative;
             width: 100%;
@@ -166,11 +211,11 @@
             transform: rotateY(180deg);
         }
 
+        /* 调整平缓流畅的飞出/复位动画 */
         .card-animate {
-            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
         }
 
-        /* 滑动提示印章 (徽章) */
         .swipe-badge {
             position: absolute;
             top: 20px;
@@ -197,7 +242,6 @@
             transform: rotate(-15deg);
         }
 
-        /* 单词与发音排版 */
         .word-header {
             display: flex;
             align-items: center;
@@ -248,7 +292,6 @@
             color: #C7C7CC;
         }
 
-        /* 底部按钮栏 (支持手机拖拽 + 桌面点击) */
         #action-buttons {
             display: none;
             width: 100%;
@@ -293,6 +336,15 @@
 </head>
 <body>
 
+    <!-- 右上角快捷滑动开关 -->
+    <div class="top-bar">
+        <span>快捷滑动</span>
+        <label class="switch">
+            <input type="checkbox" id="swipe-toggle" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+
     <h1>🚀 云端单词卡</h1>
     <div id="loading">正在连接 Notion 获取数据...</div>
 
@@ -305,31 +357,27 @@
     </div>
 
     <div id="flashcard-container">
-        <!-- 卡片堆叠区 -->
         <div class="card-stack" id="card-stack">
-            <!-- 底层卡片 (预览层) -->
+            <!-- 底层卡片 -->
             <div class="card card-next" id="next-card">
                 <div class="word-en" id="next-en">Loading...</div>
                 <div class="word-phonetic" id="next-phonetic"></div>
             </div>
             
-            <!-- 顶层卡片 (拖拽与翻转层) -->
+            <!-- 顶层卡片 -->
             <div class="card card-current" id="current-card">
-                <!-- 拖拽提示印章 -->
                 <div class="swipe-badge badge-remember" id="badge-remember">记住 🟢</div>
                 <div class="swipe-badge badge-forgot" id="badge-forgot">忘记 🔴</div>
 
                 <div class="card-inner">
-                    <!-- 正面 -->
                     <div class="card-face card-front">
                         <div class="word-header">
                             <div class="word-en" id="front-en"></div>
                             <button class="play-btn" onclick="playVoice(event)">🔊</button>
                         </div>
                         <div class="word-phonetic" id="front-phonetic"></div>
-                        <div class="tap-hint">👈 左滑忘记 | 点击翻面 | 右滑记住 👉</div>
+                        <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | 点击翻面 | 右滑记住 👉</div>
                     </div>
-                    <!-- 背面 -->
                     <div class="card-face card-back">
                         <div class="word-header">
                             <div class="word-en" id="back-en"></div>
@@ -343,10 +391,8 @@
             </div>
         </div>
 
-        <!-- 进度条 -->
         <div id="progress"></div>
 
-        <!-- 辅助操作按钮 (支持手势+点击双模式) -->
         <div id="action-buttons">
             <button class="action-btn btn-forgot" id="btn-forgot" onclick="triggerSwipe('left')">忘记了 🔴</button>
             <button class="action-btn btn-remember" id="btn-remember" onclick="triggerSwipe('right')">记住了 🟢</button>
@@ -359,21 +405,20 @@
     let currentIndex = 0;
     let isFlipped = false;
     
-    // 进度计数器
-    let initialTotal = 0;   // 今天的总任务数
-    let masteredCount = 0;  // 已经记住的个数
+    let initialTotal = 0;
+    let masteredCount = 0;
 
-    // 手势交互相关变量
     let startX = 0, startY = 0;
     let currentX = 0, currentY = 0;
     let isDragging = false;
     let isAnimating = false;
-    const SWIPE_THRESHOLD = 90; // 判定滑动成功的像素阈值
+    const SWIPE_THRESHOLD = 90;
 
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
     const badgeRemember = document.getElementById('badge-remember');
     const badgeForgot = document.getElementById('badge-forgot');
+    const swipeToggle = document.getElementById('swipe-toggle');
 
     window.onload = async () => {
         document.getElementById('loading').style.display = 'block';
@@ -396,13 +441,22 @@
         }
     }
 
+    // 动态更新提示文字
+    swipeToggle.addEventListener('change', () => {
+        const hintText = document.getElementById('tap-hint-text');
+        if (hintText) {
+            hintText.innerText = swipeToggle.checked 
+                ? "👈 左滑忘记 | 点击翻面 | 右滑记住 👉" 
+                : "点击卡片查看释义";
+        }
+    });
+
     document.getElementById('start-btn').addEventListener('click', () => {
         if(dueList.length === 0) return;
         
         initialTotal = dueList.length;
         masteredCount = 0;
 
-        // 随机打乱单词顺序
         for (let i = dueList.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [dueList[i], dueList[j]] = [dueList[j], dueList[i]];
@@ -417,24 +471,14 @@
         showCard();
     });
 
-    // 播放发音
     function playVoice(e) {
-        if (e) e.stopPropagation(); // 阻止点击喇叭时触发卡片翻转
+        if (e) e.stopPropagation();
         const word = dueList[currentIndex];
         if (!word) return;
         const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
         audio.play().catch(() => {});
     }
 
-    // 初始化手势事件 (Pointer Events 兼容触屏与鼠标)
-    function initSwipeEvents() {
-        currentCard.addEventListener('pointerdown', onPointerDown);
-        document.addEventListener('pointermove', onPointerMove);
-        document.addEventListener('pointerup', onPointerUp);
-        document.addEventListener('pointercancel', onPointerUp);
-    }
-
-    // ==================== 全局拖拽状态重置函数 ====================
     function resetDragState() {
         isDragging = false;
         startX = 0;
@@ -443,20 +487,22 @@
         currentY = 0;
     }
 
-    // ==================== 手势事件监听 ====================
+    function initSwipeEvents() {
+        currentCard.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
+    }
+
     function onPointerDown(e) {
-        // 动画未结束、无单词或点击的是发音按钮，直接忽略
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('.play-btn')) return;
 
-        // 按下时先强制重置状态，防止继承旧坐标
         resetDragState();
-        
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
         
-        // 绑定指针捕获，防止快速滑动时丢失释放事件
         try {
             currentCard.setPointerCapture(e.pointerId);
         } catch(err) {}
@@ -465,41 +511,41 @@
     }
 
     function onPointerMove(e) {
-    if (!isDragging || isAnimating) return;
-    
-    currentX = e.clientX - startX;
-    currentY = e.clientY - startY;
-    
-    const rotate = currentX * 0.08;
-    const opacity = 1 - Math.abs(currentX) / 500;
-    
-    currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
-    currentCard.style.opacity = opacity;
+        if (!isDragging || isAnimating) return;
+        
+        currentX = e.clientX - startX;
+        currentY = e.clientY - startY;
+        
+        const rotate = currentX * 0.08;
+        const opacity = 1 - Math.abs(currentX) / 500;
+        
+        currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
+        currentCard.style.opacity = opacity;
 
-    // 印章显隐
-    if (currentX > 20) {
-        badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
-        badgeForgot.style.opacity = 0;
-    } else if (currentX < -20) {
-        badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
-        badgeRemember.style.opacity = 0;
-    } else {
-        badgeRemember.style.opacity = 0;
-        badgeForgot.style.opacity = 0;
+        // 仅在开启“快捷滑动”时显现印章
+        if (swipeToggle.checked) {
+            if (currentX > 20) {
+                badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
+                badgeForgot.style.opacity = 0;
+            } else if (currentX < -20) {
+                badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
+                badgeRemember.style.opacity = 0;
+            } else {
+                badgeRemember.style.opacity = 0;
+                badgeForgot.style.opacity = 0;
+            }
+        }
+
+        const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
+        nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
+        nextCard.style.opacity = 0.6 + 0.4 * progress;
+        nextCard.style.filter = `blur(${1 - progress}px)`;
     }
-
-    // 底层卡片缩放与去模糊
-    const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
-    nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
-    nextCard.style.opacity = 0.6 + 0.4 * progress;
-    nextCard.style.filter = `blur(${1 - progress}px)`;
-    }   
 
     function onPointerUp(e) {
         if (!isDragging) return;
         isDragging = false;
 
-        // 释放指针捕获
         try {
             if (currentCard.hasPointerCapture(e.pointerId)) {
                 currentCard.releasePointerCapture(e.pointerId);
@@ -508,7 +554,6 @@
 
         const distance = Math.hypot(currentX, currentY);
 
-        // 位移极小视作点击，触发卡片翻面
         if (distance < 8) {
             resetCardPosition();
             toggleFlip();
@@ -517,15 +562,16 @@
 
         currentCard.classList.add('card-animate');
 
-        if (currentX > SWIPE_THRESHOLD) {
+        // 快捷滑动开关判断逻辑
+        if (swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
             handleSwipe('right');
-        } else if (currentX < -SWIPE_THRESHOLD) {
+        } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
             handleSwipe('left');
         } else {
+            // 开关未打开，或滑动未越过阈值时，自动平滑弹回原位
             resetCardPosition();
         }
     }
-
 
     function resetCardPosition() {
         currentCard.classList.add('card-animate');
@@ -548,13 +594,11 @@
         }
     }
 
-    // 通过底部按钮调起的滑动动画
     function triggerSwipe(direction) {
         if (isAnimating || currentIndex >= dueList.length) return;
         handleSwipe(direction);
     }
 
-    // ==================== 卡片飞出与展示更新 ====================
     function handleSwipe(direction) {
         isAnimating = true;
         const isRemembered = direction === 'right';
@@ -574,17 +618,16 @@
         nextCard.style.opacity = '1';
         nextCard.style.filter = 'blur(0px)';
 
-        // 后台静默提交 Notion
         processAnswerAsync(isRemembered);
 
+        // 延长至 400ms 衔接 0.45s 的平滑飞出动画
         setTimeout(() => {
             currentIndex++;
             showCard();
-            isAnimating = false; // 动画完全结束后才释放标志位
-        }, 250);
+            isAnimating = false;
+        }, 400);
     }
 
-    // 非阻塞异步向后台提交数据
     function processAnswerAsync(isRemembered) {
         const word = dueList[currentIndex];
         if (!word) return;
@@ -595,7 +638,6 @@
             masteredCount++;
         } else {
             newLevel = 0;
-            // 忘记了的单词塞回队尾重复复习
             dueList.push({ ...word, level: 0 });
         }
 
@@ -603,7 +645,6 @@
         const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
         const nextReviewDate = nextDate.toISOString().split('T')[0];
 
-        // 完全在后台运行的异步请求
         fetch('/.netlify/functions/update_word', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -618,8 +659,17 @@
     }
 
     function showCard() {
-        // 切换卡片前，彻底清空拖拽残留
         resetDragState();
+
+        // 【关键修复 Bug】：切换卡片前禁用 3D 翻转动画，强制归位至正面，防止新卡片展示背面的闪烁
+        const cardInner = currentCard.querySelector('.card-inner');
+        if (cardInner) {
+            cardInner.style.transition = 'none';
+            currentCard.classList.remove('is-flipped');
+            cardInner.offsetHeight; // 强制重绘 (Reflow)
+            cardInner.style.transition = ''; // 还原 transition 动画
+        }
+        isFlipped = false;
 
         if (currentIndex >= dueList.length) {
             document.getElementById('flashcard-container').style.display = 'none';
@@ -651,12 +701,11 @@
         
         document.getElementById('progress').innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
         
-        currentCard.classList.remove('card-animate', 'is-flipped');
+        currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
         badgeRemember.style.opacity = '0';
         badgeForgot.style.opacity = '0';
-        isFlipped = false;
 
         if (currentIndex + 1 < dueList.length) {
             const nextWord = dueList[currentIndex + 1];
@@ -672,9 +721,8 @@
         nextCard.style.filter = 'blur(1px)';
 
         playVoice();
-    }   
+    }
 
-    // 静默预加载音标
     async function preloadPhoneticsBackground() {
         for (let i = 0; i < dueList.length; i++) {
             const word = dueList[i];
