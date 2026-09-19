@@ -175,38 +175,32 @@
             frontPhonetic.innerText = phoneticStr;
             backPhonetic.innerText = phoneticStr;
         } else {
-            // 情况 B：Notion 里没填，使用极速稳定的 Datamuse API 获取
+            // 情况 B：请求我们自己的 Netlify 后台，去拉取有道的纯正音标
             frontPhonetic.innerText = "[获取中...]";
             backPhonetic.innerText = "[获取中...]";
             
-            // 更换为国内不卡的 Datamuse 接口
-            fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word.en)}&ipa=1&max=1`)
+            // 请求刚建好的自有接口
+            fetch(`/.netlify/functions/get_phonetic?word=${encodeURIComponent(word.en)}`)
                 .then(res => res.json())
                 .then(data => {
                     // 防止手速太快切卡片导致音标错乱
                     if (dueList[currentIndex]?.en !== word.en) return;
 
-                    let apiPhonetic = "";
-                    // 解析 Datamuse 的数据结构（音标藏在 tags 里的 ipa_pron 标签中）
-                    if (data && data.length > 0 && data[0].tags) {
-                        const ipaTag = data[0].tags.find(t => t.startsWith('ipa_pron:'));
-                        if (ipaTag) {
-                            apiPhonetic = ipaTag.replace('ipa_pron:', ''); // 提取纯音标
-                        }
-                    }
+                    // 优先使用美式音标(usphone)，没有的话用英式兜底。
+                    // 💡 如果你更喜欢英式，把它改成 data.ukphone || data.usphone
+                    let apiPhonetic = data.usphone || data.ukphone || "";
                     
                     if (apiPhonetic) {
                         const finalPhonetic = `[${apiPhonetic}]`;
                         frontPhonetic.innerText = finalPhonetic;
                         backPhonetic.innerText = finalPhonetic;
                     } else {
-                        // 查不到（比如短语），静默清空，不干扰复习
+                        // 查不到短语时自动隐藏
                         frontPhonetic.innerText = "";
                         backPhonetic.innerText = "";
                     }
                 })
                 .catch(() => {
-                    // 遇到极端网络错误也直接清空，绝不卡死界面
                     if (dueList[currentIndex]?.en === word.en) {
                         frontPhonetic.innerText = "";
                         backPhonetic.innerText = "";
