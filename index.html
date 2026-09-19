@@ -561,8 +561,8 @@
         const hintText = document.getElementById('tap-hint-text');
         if (hintText) {
             hintText.innerText = swipeToggle.checked 
-                ? "点击卡片查看释义" 
-                : "👈 左滑忘记 | 点击翻面 | 右滑记住 👉";
+                ? "👈 左滑忘记 | 点击翻面 | 右滑记住 👉" 
+                : "点击卡片查看释义（请使用下方按钮操作）";
         }
     });
 
@@ -630,6 +630,9 @@
         
         currentX = e.clientX - startX;
         currentY = e.clientY - startY;
+
+        // 👈 【关键修复】：如果关闭了快捷滑动开关，直接拦截，不产生任何卡片跟随位移
+        if (!swipeToggle.checked) return;
         
         const rotate = currentX * 0.08;
         const opacity = 1 - Math.abs(currentX) / 500;
@@ -637,17 +640,15 @@
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
-        if (!swipeToggle.checked) { // 👈 只有关闭开关（允许手势）时才显示印章
-            if (currentX > 20) {
-                badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
-                badgeForgot.style.opacity = 0;
-            } else if (currentX < -20) {
-                badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
-                badgeRemember.style.opacity = 0;
-            } else {
-                badgeRemember.style.opacity = 0;
-                badgeForgot.style.opacity = 0;
-            }
+        if (currentX > 20) {
+            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
+            badgeForgot.style.opacity = 0;
+        } else if (currentX < -20) {
+            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
+            badgeRemember.style.opacity = 0;
+        } else {
+            badgeRemember.style.opacity = 0;
+            badgeForgot.style.opacity = 0;
         }
 
         const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
@@ -676,12 +677,13 @@
 
         currentCard.classList.add('card-animate');
 
-        if (!swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
+        // 👈 【关键修复】：只有开启开关且滑动距离超过阈值时才触发判定
+        if (swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
             handleSwipe('right');
-        } else if (!swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
+        } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
             handleSwipe('left');
         } else {
-            resetCardPosition(); // 开启开关后，手势松开一律弹回原位
+            resetCardPosition();
         }
     }
 
