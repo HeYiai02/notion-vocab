@@ -13,6 +13,9 @@
             --card-bg: #FFFFFF;
             --text-main: #1C1C1E;
             --text-sub: #8E8E93;
+            /* 剑桥词典经典品牌色 */
+            --cambridge-blue: #002554;
+            --cambridge-red: #D0021B;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -443,7 +446,7 @@
             width: 100%;
             max-width: 360px;
             justify-content: space-between;
-            margin-top: 20px;
+            margin-top: 15px;
             gap: 15px;
         }
         .action-btn {
@@ -466,7 +469,7 @@
         .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
         #progress {
-            margin-top: 15px;
+            margin-top: 12px;
             color: var(--text-sub);
             font-size: 15px;
             display: none;
@@ -477,6 +480,41 @@
             margin-top: 50px;
             color: var(--primary);
             font-weight: bold;
+        }
+
+        /* 剑桥词典跳转按钮风格 */
+        .cambridge-btn {
+            margin-top: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 18px;
+            background-color: var(--cambridge-blue);
+            color: #FFFFFF;
+            border: none;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 37, 84, 0.2);
+            transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+            user-select: none;
+        }
+        .cambridge-btn:active {
+            transform: scale(0.96);
+            background-color: #001938;
+            box-shadow: 0 2px 6px rgba(0, 37, 84, 0.2);
+        }
+        .cambridge-badge {
+            background-color: var(--cambridge-red);
+            color: #FFFFFF;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 5px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
         }
     </style>
 </head>
@@ -549,6 +587,13 @@
             <button class="action-btn btn-forgot" id="btn-forgot" onclick="triggerSwipe('left')">忘记了 🔴</button>
             <button class="action-btn btn-remember" id="btn-remember" onclick="triggerSwipe('right')">记住了 🟢</button>
         </div>
+
+        <!-- 剑桥词典直达按钮 -->
+        <button class="cambridge-btn" onclick="openCambridgeDict()">
+            <span class="cambridge-badge">Cambridge</span>
+            <span>在剑桥词典中查看</span>
+            <span style="font-size: 11px; opacity: 0.8;">↗</span>
+        </button>
     </div>
 
     <!-- 完整释义弹窗 Modal -->
@@ -627,6 +672,17 @@
             undoBtn.classList.add('active');
         } else {
             undoBtn.classList.remove('active');
+        }
+    }
+
+    // 新增：在新标签页中打开剑桥词典搜索当前单词
+    function openCambridgeDict() {
+        if (currentIndex >= dueList.length) return;
+        const word = dueList[currentIndex];
+        if (word && word.en) {
+            const encodedWord = encodeURIComponent(word.en.trim());
+            const url = `https://dictionary.cambridge.org/dictionary/english/${encodedWord}`;
+            window.open(url, '_blank');
         }
     }
 
