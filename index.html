@@ -175,21 +175,24 @@
             frontPhonetic.innerText = phoneticStr;
             backPhonetic.innerText = phoneticStr;
         } else {
-            // 情况 B：Notion 里没填，显示加载动画，并自动去 API 获取
+            // 情况 B：Notion 里没填，使用极速稳定的 Datamuse API 获取
             frontPhonetic.innerText = "[获取中...]";
             backPhonetic.innerText = "[获取中...]";
             
-            fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.en)}`)
+            // 更换为国内不卡的 Datamuse 接口
+            fetch(`https://api.datamuse.com/words?sp=${encodeURIComponent(word.en)}&ipa=1&max=1`)
                 .then(res => res.json())
                 .then(data => {
-                    // 防止手速太快切卡片导致音标错乱，校验当前卡片还是不是这个词
+                    // 防止手速太快切卡片导致音标错乱
                     if (dueList[currentIndex]?.en !== word.en) return;
 
                     let apiPhonetic = "";
-                    if (data && data.length > 0) {
-                        // 提取接口返回的音标（去除多余的斜杠）
-                        apiPhonetic = data[0].phonetic || (data[0].phonetics.find(p => p.text) || {}).text || "";
-                        apiPhonetic = apiPhonetic.replace(/\//g, ''); 
+                    // 解析 Datamuse 的数据结构（音标藏在 tags 里的 ipa_pron 标签中）
+                    if (data && data.length > 0 && data[0].tags) {
+                        const ipaTag = data[0].tags.find(t => t.startsWith('ipa_pron:'));
+                        if (ipaTag) {
+                            apiPhonetic = ipaTag.replace('ipa_pron:', ''); // 提取纯音标
+                        }
                     }
                     
                     if (apiPhonetic) {
@@ -197,12 +200,13 @@
                         frontPhonetic.innerText = finalPhonetic;
                         backPhonetic.innerText = finalPhonetic;
                     } else {
-                        // 如果 API 没查到（比如是不常见的短语），则置空
+                        // 查不到（比如短语），静默清空，不干扰复习
                         frontPhonetic.innerText = "";
                         backPhonetic.innerText = "";
                     }
                 })
                 .catch(() => {
+                    // 遇到极端网络错误也直接清空，绝不卡死界面
                     if (dueList[currentIndex]?.en === word.en) {
                         frontPhonetic.innerText = "";
                         backPhonetic.innerText = "";
