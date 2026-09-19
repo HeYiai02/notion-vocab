@@ -820,7 +820,9 @@
         let newLevel;
         if (isRemembered) {
             newLevel = Math.min(word.level + 1, INTERVALS.length - 1);
+            incrementTodayCompleted();
             masteredCount++;
+            updateProgress();
         } else {
             newLevel = 0;
             dueList.push({ ...word, level: 0 });
