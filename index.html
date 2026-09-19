@@ -694,7 +694,7 @@
         const word = dueList[currentIndex];
         if (word && word.en) {
             const encodedWord = encodeURIComponent(word.en.trim());
-            const url = `https://dictionary.cambridge.org/dictionary/english/${encodedWord}`;
+            const url = `https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${encodedWord}`;
             window.open(url, '_blank');
         }
     }
