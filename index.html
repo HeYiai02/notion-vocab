@@ -134,7 +134,7 @@
             position: relative;
             width: 100%;
             height: 420px;
-            perspective: 1000px;
+            perspective: 1200px; /* 增加 3D 景深 */
             margin-top: 10px;
             touch-action: none;
         }
@@ -170,6 +170,7 @@
             z-index: 2;
             cursor: grab;
             transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
         }
 
         .card-current:active {
@@ -181,21 +182,27 @@
             width: 100%;
             height: 100%;
             text-align: center;
-            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            /* 采用 iOS 风格的自然缓动贝塞尔曲线 */
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
             transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d;
             border-radius: 20px;
         }
 
         .card-current.is-flipped .card-inner {
             transform: rotateY(180deg);
+            -webkit-transform: rotateY(180deg);
         }
 
         .card-face {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
+            /* 强制隐藏旋转背面的元素 */
+            -webkit-backface-visibility: hidden !important;
+            backface-visibility: hidden !important;
             background: var(--card-bg);
             border-radius: 20px;
             display: flex;
@@ -207,8 +214,14 @@
             text-align: center;
         }
 
+        .card-front {
+            transform: rotateY(0deg) translateZ(1px);
+            -webkit-transform: rotateY(0deg) translateZ(1px);
+        }
+
         .card-back {
-            transform: rotateY(180deg);
+            transform: rotateY(180deg) translateZ(1px);
+            -webkit-transform: rotateY(180deg) translateZ(1px);
         }
 
         .card-animate {
@@ -558,11 +571,17 @@
 
     // 动态更新提示文字
     swipeToggle.addEventListener('change', () => {
+        const actionBtns = document.getElementById('action-buttons');
         const hintText = document.getElementById('tap-hint-text');
-        if (hintText) {
-            hintText.innerText = swipeToggle.checked 
-                ? "👈 左滑忘记 | 点击翻面 | 右滑记住 👉" 
-                : "点击卡片查看释义（请使用下方按钮操作）";
+
+        if (swipeToggle.checked) {
+            // 开启快捷滑动：隐藏底部按钮
+            if (actionBtns) actionBtns.style.display = 'none';
+            if (hintText) hintText.innerText = "👈 左滑忘记 | 点击翻面 | 右滑记住 👉";
+        } else {
+            // 关闭快捷滑动：显示底部按钮
+            if (actionBtns) actionBtns.style.display = 'flex';
+            if (hintText) hintText.innerText = "点击卡片查看释义（请使用下方按钮操作）";
         }
     });
 
@@ -579,8 +598,10 @@
         
         document.getElementById('dashboard').style.display = 'none';
         document.getElementById('flashcard-container').style.display = 'flex';
-        document.getElementById('action-buttons').style.display = 'flex';
         document.getElementById('progress').style.display = 'block';
+
+        // 👈 【联动】根据当前开关状态，决定开始复习时是否显示按钮
+        document.getElementById('action-buttons').style.display = swipeToggle.checked ? 'none' : 'flex';
         
         initSwipeEvents();
         showCard();
