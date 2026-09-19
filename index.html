@@ -159,19 +159,58 @@
 
         const word = dueList[currentIndex];
         
-        // 填充内容
+        // 1. 填充基础中英文内容
         document.getElementById('front-en').innerText = word.en;
         document.getElementById('back-en').innerText = word.en;
-        
-        // 如果有音标则加上括号 [ ]
-        const phoneticStr = word.phonetic ? `[${word.phonetic}]` : "";
-        document.getElementById('front-phonetic').innerText = phoneticStr;
-        document.getElementById('back-phonetic').innerText = phoneticStr;
-        
         document.getElementById('back-zh').innerText = word.zh;
         document.getElementById('back-sub').innerText = word.sub;
         
-        // 更新全新的进度条逻辑
+        // 2. 智能音标获取逻辑
+        const frontPhonetic = document.getElementById('front-phonetic');
+        const backPhonetic = document.getElementById('back-phonetic');
+        
+        if (word.phonetic) {
+            // 情况 A：如果在 Notion 里手动填了，直接用 Notion 的
+            const phoneticStr = `[${word.phonetic.replace(/\//g, '')}]`;
+            frontPhonetic.innerText = phoneticStr;
+            backPhonetic.innerText = phoneticStr;
+        } else {
+            // 情况 B：Notion 里没填，显示加载动画，并自动去 API 获取
+            frontPhonetic.innerText = "[获取中...]";
+            backPhonetic.innerText = "[获取中...]";
+            
+            fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.en)}`)
+                .then(res => res.json())
+                .then(data => {
+                    // 防止手速太快切卡片导致音标错乱，校验当前卡片还是不是这个词
+                    if (dueList[currentIndex]?.en !== word.en) return;
+
+                    let apiPhonetic = "";
+                    if (data && data.length > 0) {
+                        // 提取接口返回的音标（去除多余的斜杠）
+                        apiPhonetic = data[0].phonetic || (data[0].phonetics.find(p => p.text) || {}).text || "";
+                        apiPhonetic = apiPhonetic.replace(/\//g, ''); 
+                    }
+                    
+                    if (apiPhonetic) {
+                        const finalPhonetic = `[${apiPhonetic}]`;
+                        frontPhonetic.innerText = finalPhonetic;
+                        backPhonetic.innerText = finalPhonetic;
+                    } else {
+                        // 如果 API 没查到（比如是不常见的短语），则置空
+                        frontPhonetic.innerText = "";
+                        backPhonetic.innerText = "";
+                    }
+                })
+                .catch(() => {
+                    if (dueList[currentIndex]?.en === word.en) {
+                        frontPhonetic.innerText = "";
+                        backPhonetic.innerText = "";
+                    }
+                });
+        }
+        
+        // 3. 更新进度条与卡片状态
         document.getElementById('progress').innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
         
         const card = document.getElementById('card');
@@ -184,8 +223,8 @@
         document.getElementById('btn-forgot').innerText = "忘记了 🔴";
         document.getElementById('btn-remember').innerText = "记住了 🟢";
 
-        // 显示新卡片时，自动朗读发音！
-        playVoice();
+        // 4. 自动朗读发音
+        // playVoice();
     }
 
     document.getElementById('card').addEventListener('click', () => {
