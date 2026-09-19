@@ -11,42 +11,52 @@ export async function onRequest(context) {
 
   try {
     const today = new Date().toISOString().split('T')[0];
+    let allResults = [];
+    let hasMore = true;
+    let startCursor = undefined;
 
-    // 从 Notion 查询今天及之前需要复习的单词
-    const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${NOTION_SECRET}`,
-        "Notion-Version": "2022-06-28",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
+    // 👈 自动循环分页请求，突破 Notion API 单次 100 条的限制
+    while (hasMore) {
+      const bodyPayload = {
         filter: {
           or: [
-            {
-              property: "NextReview",
-              date: { on_or_before: today }
-            },
-            {
-              property: "NextReview",
-              date: { is_empty: true }
-            }
+            { property: "NextReview", date: { on_or_before: today } },
+            { property: "NextReview", date: { is_empty: true } }
           ]
-        }
-      })
-    });
+        },
+        page_size: 100
+      };
 
-    const data = await response.json();
+      if (startCursor) {
+        bodyPayload.start_cursor = startCursor;
+      }
 
-    if (!response.ok) {
-      return new Response(JSON.stringify({ error: data.message || "Notion API 请求失败" }), {
-        status: response.status,
-        headers: { "Content-Type": "application/json; charset=utf-8" }
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${NOTION_SECRET}`,
+          "Notion-Version": "2022-06-28",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(bodyPayload)
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return new Response(JSON.stringify({ error: data.message || "Notion API 请求失败" }), {
+          status: response.status,
+          headers: { "Content-Type": "application/json; charset=utf-8" }
+        });
+      }
+
+      allResults.push(...(data.results || []));
+      hasMore = data.has_more;
+      startCursor = data.next_cursor;
     }
 
-    // 解析 Notion 原始字段，提取前端卡片所需的数据结构
-    const words = (data.results || []).map(page => {
+    // 解析所有获取到的 Notion 单词卡片
+    const words = allResults.map(page => {
       const props = page.properties || {};
       
       const titleProp = props.Word || props.Name || props.Title || Object.values(props).find(p => p.type === 'title');
