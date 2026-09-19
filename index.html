@@ -28,7 +28,7 @@
             position: relative;
         }
         
-        /* 顶部状态栏：包含撤回按钮与快捷开关 */
+        /* 顶部状态栏：快捷开关居左，撤回按钮居右 */
         .top-bar {
             position: absolute;
             top: 20px;
@@ -41,31 +41,6 @@
             font-weight: 500;
             color: var(--text-sub);
             z-index: 100;
-        }
-
-        /* 极简撤回按钮 */
-        .undo-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            opacity: 0;
-            pointer-events: none; /* 无历史时禁用 */
-        }
-        .undo-btn.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .undo-btn:active {
-            background-color: rgba(0, 122, 255, 0.1);
         }
 
         .switch-container {
@@ -105,6 +80,31 @@
         }
         input:checked + .slider:before {
             transform: translateX(20px);
+        }
+
+        /* 极简撤回按钮 (显示在右上角) */
+        .undo-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .undo-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .undo-btn:active {
+            background-color: rgba(0, 122, 255, 0.1);
         }
 
         h1 {
@@ -482,11 +482,8 @@
 </head>
 <body>
 
-    <!-- 顶部状态栏 -->
+    <!-- 顶部状态栏：快捷滑动居左，撤回按钮居右 -->
     <div class="top-bar">
-        <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">
-            ↺ 撤回上词
-        </button>
         <div class="switch-container">
             <span>快捷滑动</span>
             <label class="switch">
@@ -494,6 +491,9 @@
                 <span class="slider"></span>
             </label>
         </div>
+        <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">
+            ↺ 撤回上词
+        </button>
     </div>
 
     <h1>🚀 云端单词卡</h1>
@@ -572,7 +572,6 @@
     let initialTotal = 0;
     let masteredCount = 0;
 
-    // 历史栈：记录每一次滑走的状态
     let historyStack = [];
 
     let startX = 0, startY = 0;
@@ -580,7 +579,7 @@
     let isDragging = false;
     let isAnimating = false;
     const SWIPE_THRESHOLD = 90;
-    const SWIPE_DOWN_THRESHOLD = 100; // 下滑撤回临界距离
+    const SWIPE_DOWN_THRESHOLD = 100;
 
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
@@ -765,9 +764,7 @@
 
         if (!swipeToggle.checked) return;
         
-        // 判断主要滑动方向（垂直还是水平）
         if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
-            // 👈 下滑撤回视觉拖拽
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
             badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
             badgeRemember.style.opacity = 0;
@@ -819,7 +816,6 @@
 
         currentCard.classList.add('card-animate');
 
-        // 👈 检查触发下滑撤回手势
         if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
             undoLastAction();
             return;
@@ -893,7 +889,6 @@
         const word = dueList[currentIndex];
         if (!word) return;
 
-        // 压入历史记录栈
         historyStack.push({
             word: { ...word },
             index: currentIndex,
@@ -928,7 +923,6 @@
         });
     }
 
-    // 👈 撤回上一次操作逻辑
     function undoLastAction() {
         if (historyStack.length === 0 || isAnimating) return;
         
@@ -939,13 +933,11 @@
             decrementTodayCompleted();
             masteredCount = Math.max(0, masteredCount - 1);
         } else {
-            // 如果上次选择了“忘记”，当时在队列尾部压入了副本，现在从尾部移除
             dueList.pop();
         }
 
         currentIndex = last.index;
 
-        // 向后台异步恢复 Notion 原始状态（恢复之前的 level，并将日期设为今天）
         const todayStr = getTodayDateStr();
         fetch('/api/update_word', {
             method: 'POST',
@@ -959,7 +951,6 @@
             console.error(`后台撤回恢复 Notion 失败 [${last.word.en}]:`, err);
         });
 
-        // 展现卡片飞回动画
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
         currentCard.style.opacity = '0';
