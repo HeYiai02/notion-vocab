@@ -40,6 +40,7 @@ exports.handler = async function(event, context) {
                 en: props.Word?.title[0]?.plain_text || "",
                 zh: props.Translation?.rich_text[0]?.plain_text || "",
                 sub: props.Subtitle?.rich_text[0]?.plain_text || "",
+                phonetic: props.Phonetic?.rich_text[0]?.plain_text || "", 
                 level: props.Level?.number || 0,
             };
         }).filter(w => w.en);
