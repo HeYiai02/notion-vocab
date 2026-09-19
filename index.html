@@ -542,12 +542,49 @@
     const badgeForgot = document.getElementById('badge-forgot');
     const swipeToggle = document.getElementById('swipe-toggle');
 
+    function getTodayDateStr() {
+        return new Date().toISOString().split('T')[0];
+    }
+
+    function getTodayCompletedCount() {
+        const savedDate = localStorage.getItem('review_date');
+        const today = getTodayDateStr();
+        if (savedDate === today) {
+            return parseInt(localStorage.getItem('review_completed_count') || '0', 10);
+        } else {
+            // 如果跨天（比如到了第二天），自动归零重置
+            localStorage.setItem('review_date', today);
+            localStorage.setItem('review_completed_count', '0');
+            return 0;
+        }
+    }
+
+    function incrementTodayCompleted() {
+        const count = getTodayCompletedCount() + 1;
+        localStorage.setItem('review_completed_count', count.toString());
+    }
+
+
     window.onload = async () => {
         document.getElementById('loading').style.display = 'block';
         try {
             const res = await fetch('/api/get_words');
             dueList = await res.json();
-            
+            // 假设获取到的待复习列表为 dueList
+            const remainingCount = dueList.length;
+            const todayCompleted = getTodayCompletedCount();
+            const totalCount = remainingCount + todayCompleted;
+
+            // 更新仪表盘文字（例：今日待复习 10 词 | 今日已完成 10/20 词）
+            const countEl = document.getElementById('due-count');
+            if (countEl) {
+                if (totalCount === 0) {
+                    countEl.innerText = "🎉 今日无待复习单词！";
+                } else {
+                    countEl.innerText = `今日待复习: ${remainingCount} 词 (已完成: ${todayCompleted} / ${totalCount})`;
+                }
+            }
+
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('due-words').innerText = dueList.length;
@@ -591,9 +628,10 @@
 
     document.getElementById('start-btn').addEventListener('click', () => {
         if(dueList.length === 0) return;
-        
-        initialTotal = dueList.length;
-        masteredCount = 0;
+        const todayCompleted = getTodayCompletedCount();
+        // 总数 = 本地已完成数 + 当前剩余待复习数
+        initialTotal = dueList.length + todayCompleted; 
+        masteredCount = todayCompleted;
 
         for (let i = dueList.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -608,6 +646,7 @@
         document.getElementById('action-buttons').style.display = swipeToggle.checked ? 'none' : 'flex';
         
         initSwipeEvents();
+        updateProgress(); // 更新顶部进度条（例如显示 10/20）
         showCard();
     });
 
