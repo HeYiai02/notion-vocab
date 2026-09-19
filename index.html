@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的云端单词卡</title>
+    <style>
+        :root { --primary: #007AFF; --success: #34C759; --danger: #FF3B30; --bg: #F2F2F7; --card-bg: #FFFFFF; --text-main: #1C1C1E; --text-sub: #8E8E93; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+        h1 { color: var(--text-main); font-size: 24px; margin-bottom: 10px; }
+        
+        #dashboard { text-align: center; width: 100%; max-width: 400px; margin-top: 50px; }
+        .stats { background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .stats p { margin: 5px 0; color: var(--text-sub); }
+        .stats strong { color: var(--primary); font-size: 24px; }
+        .start-btn { display: inline-block; width: 100%; padding: 15px; background: var(--primary); color: white; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: 20px; border: none; }
+
+        #flashcard-container { display: none; width: 100%; max-width: 400px; height: 60vh; perspective: 1000px; margin-top: 20px; }
+        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
+        .card.is-flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; background: var(--card-bg); border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
+        .card-back { transform: rotateY(180deg); }
+        .word-en { font-size: 36px; font-weight: bold; color: var(--text-main); margin-bottom: 10px; }
+        .word-zh { font-size: 24px; color: var(--primary); margin-bottom: 15px; }
+        .word-sub { font-size: 16px; color: var(--text-sub); line-height: 1.5; }
+        .tap-hint { position: absolute; bottom: 20px; font-size: 14px; color: #C7C7CC; }
+
+        #action-buttons { display: none; width: 100%; max-width: 400px; justify-content: space-between; margin-top: 30px; gap: 15px; }
+        .action-btn { flex: 1; padding: 15px 0; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; }
+        .btn-forgot { background-color: var(--danger); }
+        .btn-remember { background-color: var(--success); }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        #progress { margin-top: 20px; color: var(--text-sub); font-size: 14px; display: none; }
+        #loading { display: none; margin-top: 50px; color: var(--primary); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>🚀 云端单词卡</h1>
+
+    <div id="loading">正在连接 Notion 获取数据...</div>
+
+    <div id="dashboard" style="display: none;">
+        <div class="stats">
+            <p>今日待复习</p>
+            <strong id="due-words">0</strong> 词
+        </div>
+        <button class="start-btn" id="start-btn">开始复习</button>
+    </div>
+
+    <div id="flashcard-container">
+        <div class="card" id="card">
+            <div class="card-face card-front">
+                <div class="word-en" id="front-en"></div>
+                <div class="tap-hint">点击翻看释义</div>
+            </div>
+            <div class="card-face card-back">
+                <div class="word-en" id="back-en"></div>
+                <div class="word-zh" id="back-zh"></div>
+                <div class="word-sub" id="back-sub"></div>
+            </div>
+        </div>
+    </div>
+    <div id="progress"></div>
+
+    <div id="action-buttons">
+        <button class="action-btn btn-forgot" id="btn-forgot" onclick="handleAnswer(false)">忘记了 🔴</button>
+        <button class="action-btn btn-remember" id="btn-remember" onclick="handleAnswer(true)">记住了 🟢</button>
+    </div>
+
+<script>
+    const INTERVALS = [0, 1, 2, 4, 7, 15, 30]; 
+    let dueList = [];
+    let currentIndex = 0;
+    let isFlipped = false;
+
+    // 页面加载时请求 API
+    window.onload = async () => {
+        document.getElementById('loading').style.display = 'block';
+        try {
+            const res = await fetch('/api/get_words');
+            dueList = await res.json();
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('due-words').innerText = dueList.length;
+
+            if (dueList.length === 0) {
+                document.getElementById('start-btn').innerText = "任务已完成，太棒了！";
+                document.getElementById('start-btn').disabled = true;
+            }
+        } catch (err) {
+            document.getElementById('loading').innerText = "获取数据失败，请检查配置。";
+        }
+    }
+
+    document.getElementById('start-btn').addEventListener('click', () => {
+        if(dueList.length === 0) return;
+        // 打乱顺序
+        for (let i = dueList.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [dueList[i], dueList[j]] = [dueList[j], dueList[i]];
+        }
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('flashcard-container').style.display = 'block';
+        document.getElementById('progress').style.display = 'block';
+        showCard();
+    });
+
+    function showCard() {
+        if (currentIndex >= dueList.length) {
+            document.getElementById('flashcard-container').style.display = 'none';
+            document.getElementById('action-buttons').style.display = 'none';
+            document.getElementById('progress').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('start-btn').innerText = "任务已完成，太棒了！";
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('due-words').innerText = "0";
+            return;
+        }
+
+        const word = dueList[currentIndex];
+        document.getElementById('front-en').innerText = word.en;
+        document.getElementById('back-en').innerText = word.en;
+        document.getElementById('back-zh').innerText = word.zh;
+        document.getElementById('back-sub').innerText = word.sub;
+        document.getElementById('progress').innerText = `进度: ${currentIndex + 1} / ${dueList.length}`;
+        
+        const card = document.getElementById('card');
+        card.classList.remove('is-flipped');
+        isFlipped = false;
+        document.getElementById('action-buttons').style.display = 'none';
+        
+        // 恢复按钮状态
+        document.getElementById('btn-forgot').disabled = false;
+        document.getElementById('btn-remember').disabled = false;
+        document.getElementById('btn-forgot').innerText = "忘记了 🔴";
+        document.getElementById('btn-remember').innerText = "记住了 🟢";
+    }
+
+    document.getElementById('card').addEventListener('click', () => {
+        if (isFlipped) return;
+        document.getElementById('card').classList.add('is-flipped');
+        isFlipped = true;
+        setTimeout(() => { document.getElementById('action-buttons').style.display = 'flex'; }, 300);
+    });
+
+    async function handleAnswer(isRemembered) {
+        const word = dueList[currentIndex];
+        
+        // 锁定按钮防止重复点击
+        document.getElementById('btn-forgot').disabled = true;
+        document.getElementById('btn-remember').disabled = true;
+        if(isRemembered) document.getElementById('btn-remember').innerText = "保存中...";
+        else document.getElementById('btn-forgot').innerText = "保存中...";
+
+        // 计算新等级和新日期
+        const newLevel = isRemembered ? Math.min(word.level + 1, INTERVALS.length - 1) : 0;
+        const daysToAdd = INTERVALS[newLevel];
+        const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+        const nextReviewDate = nextDate.toISOString().split('T')[0];
+
+        // 提交到云端
+        await fetch('/api/update_word', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pageId: word.pageId,
+                newLevel: newLevel,
+                nextReviewDate: nextReviewDate
+            })
+        });
+
+        currentIndex++;
+        showCard();
+    }
+</script>
+</body>
+</html>
