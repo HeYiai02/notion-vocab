@@ -110,6 +110,9 @@
             if (dueList.length === 0) {
                 document.getElementById('start-btn').innerText = "任务已完成，太棒了！";
                 document.getElementById('start-btn').disabled = true;
+            } else {
+                // 【新增这一行】：数据加载完毕后，立刻启动后台静默下载音标！
+                preloadPhoneticsBackground(); 
             }
         } catch (err) {
             document.getElementById('loading').innerText = "获取数据失败，请检查配置。";
@@ -147,68 +150,32 @@
 
     function showCard() {
         if (currentIndex >= dueList.length) {
-            document.getElementById('flashcard-container').style.display = 'none';
-            document.getElementById('action-buttons').style.display = 'none';
-            document.getElementById('progress').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('start-btn').innerText = "任务已完成，太棒了！";
-            document.getElementById('start-btn').disabled = true;
-            document.getElementById('due-words').innerText = "0";
+            // ... 省略结束复习的 UI 代码 ...
             return;
         }
 
         const word = dueList[currentIndex];
         
-        // 1. 填充基础中英文内容
         document.getElementById('front-en').innerText = word.en;
         document.getElementById('back-en').innerText = word.en;
         document.getElementById('back-zh').innerText = word.zh;
         document.getElementById('back-sub').innerText = word.sub;
         
-        // 2. 智能音标获取逻辑
         const frontPhonetic = document.getElementById('front-phonetic');
         const backPhonetic = document.getElementById('back-phonetic');
         
+        // 【极简音标逻辑】：现在不需要在展示卡片时去 Fetch 了！
         if (word.phonetic) {
-            // 情况 A：如果在 Notion 里手动填了，直接用 Notion 的
+            // 如果 Notion 填了，或者后台预加载已经拿到了，瞬间秒显！
             const phoneticStr = `[${word.phonetic.replace(/\//g, '')}]`;
             frontPhonetic.innerText = phoneticStr;
             backPhonetic.innerText = phoneticStr;
         } else {
-            // 情况 B：请求我们自己的 Netlify 后台，去拉取有道的纯正音标
-            frontPhonetic.innerText = "[获取中...]";
-            backPhonetic.innerText = "[获取中...]";
-            
-            // 请求刚建好的自有接口
-            fetch(`/.netlify/functions/get_phonetic?word=${encodeURIComponent(word.en)}`)
-                .then(res => res.json())
-                .then(data => {
-                    // 防止手速太快切卡片导致音标错乱
-                    if (dueList[currentIndex]?.en !== word.en) return;
-
-                    // 优先使用美式音标(usphone)，没有的话用英式兜底。
-                    // 💡 如果你更喜欢英式，把它改成 data.ukphone || data.usphone
-                    let apiPhonetic = data.usphone || data.ukphone || "";
-                    
-                    if (apiPhonetic) {
-                        const finalPhonetic = `[${apiPhonetic}]`;
-                        frontPhonetic.innerText = finalPhonetic;
-                        backPhonetic.innerText = finalPhonetic;
-                    } else {
-                        // 查不到短语时自动隐藏
-                        frontPhonetic.innerText = "";
-                        backPhonetic.innerText = "";
-                    }
-                })
-                .catch(() => {
-                    if (dueList[currentIndex]?.en === word.en) {
-                        frontPhonetic.innerText = "";
-                        backPhonetic.innerText = "";
-                    }
-                });
+            // 如果是短语，或者用户手速太快预加载还没跑到这一个，直接留空，不弹讨厌的[获取中]
+            frontPhonetic.innerText = "";
+            backPhonetic.innerText = "";
         }
         
-        // 3. 更新进度条与卡片状态
         document.getElementById('progress').innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
         
         const card = document.getElementById('card');
@@ -221,8 +188,37 @@
         document.getElementById('btn-forgot').innerText = "忘记了 🔴";
         document.getElementById('btn-remember').innerText = "记住了 🟢";
 
-        // 4. 自动朗读发音
-        // playVoice();
+        playVoice();
+    }
+
+    // 静默预加载函数
+    async function preloadPhoneticsBackground() {
+        for (let i = 0; i < dueList.length; i++) {
+            const word = dueList[i];
+            // 如果 Notion 里没填，且不是短语（没有空格），才去请求
+            if (!word.phonetic && !word.en.includes(" ")) {
+                try {
+                    // 偷偷去请求
+                    const res = await fetch(`/.netlify/functions/get_phonetic?word=${encodeURIComponent(word.en)}`);
+                    const data = await res.json();
+                    const apiPhonetic = data.usphone || data.ukphone || "";
+                    
+                    if (apiPhonetic) {
+                        // 拿到后直接存入内存！
+                        word.phonetic = apiPhonetic; 
+                        
+                        // 极端情况：如果用户手速极快，后台还在加载时他已经翻到了这张卡，直接动态帮他显示出来
+                        if (currentIndex === i) {
+                            const pStr = `[${apiPhonetic}]`;
+                            document.getElementById('front-phonetic').innerText = pStr;
+                            document.getElementById('back-phonetic').innerText = pStr;
+                        }
+                    }
+                } catch (err) {
+                    console.error("预加载失败", err);
+                }
+            }
+        }
     }
 
     document.getElementById('card').addEventListener('click', () => {
