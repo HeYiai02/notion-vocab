@@ -32,7 +32,7 @@
         .top-bar {
             position: absolute;
             top: 20px;
-            right: 20px;
+            left: 20px; /* 👈 这里原先是 right: 20px; */
             display: flex;
             align-items: center;
             gap: 8px;
@@ -211,7 +211,6 @@
             transform: rotateY(180deg);
         }
 
-        /* 调整平缓流畅的飞出/复位动画 */
         .card-animate {
             transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease;
         }
@@ -269,27 +268,122 @@
         .word-phonetic {
             font-size: 18px;
             color: var(--primary);
-            margin-bottom: 15px;
+            margin-bottom: 12px;
             font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
             min-height: 24px;
         }
         
+        /* 中文释义超长截断与交互样式 */
         .word-zh {
-            font-size: 22px;
+            font-size: 20px;
             color: var(--text-main);
-            margin-bottom: 15px;
-            line-height: 1.4;
+            margin-bottom: 12px;
+            line-height: 1.45;
+            max-width: 100%;
+            display: -webkit-box;
+            -webkit-line-clamp: 3; /* 最多显示3行，超出省略 */
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+            word-break: break-word;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: background-color 0.2s;
         }
+        .word-zh:active {
+            background-color: rgba(0,0,0,0.05);
+        }
+
         .word-sub {
-            font-size: 15px;
+            font-size: 14px;
             color: var(--text-sub);
-            line-height: 1.5;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
         }
         .tap-hint {
             position: absolute;
             bottom: 20px;
             font-size: 13px;
             color: #C7C7CC;
+        }
+
+        /* 完整释义遮罩弹窗 (Modal) */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal-card {
+            background: var(--card-bg);
+            width: 85%;
+            max-width: 320px;
+            max-height: 70vh;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.18);
+            display: flex;
+            flex-direction: column;
+            box-sizing: border-box;
+            transform: scale(0.9);
+            transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .modal-overlay.active .modal-card {
+            transform: scale(1);
+        }
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-main);
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #E5E5EA;
+            padding-bottom: 8px;
+        }
+        .modal-body {
+            font-size: 16px;
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-y: auto;
+            max-height: 45vh;
+            text-align: left;
+            word-break: break-word;
+            padding-right: 5px;
+            white-space: pre-wrap;
+        }
+        .modal-close-btn {
+            margin-top: 15px;
+            width: 100%;
+            padding: 12px 0;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,122,255,0.25);
         }
 
         #action-buttons {
@@ -384,7 +478,7 @@
                             <button class="play-btn" onclick="playVoice(event)">🔊</button>
                         </div>
                         <div class="word-phonetic" id="back-phonetic"></div>
-                        <div class="word-zh" id="back-zh"></div>
+                        <div class="word-zh" id="back-zh" title="点击查看完整释义"></div>
                         <div class="word-sub" id="back-sub"></div>
                     </div>
                 </div>
@@ -396,6 +490,17 @@
         <div id="action-buttons">
             <button class="action-btn btn-forgot" id="btn-forgot" onclick="triggerSwipe('left')">忘记了 🔴</button>
             <button class="action-btn btn-remember" id="btn-remember" onclick="triggerSwipe('right')">记住了 🟢</button>
+        </div>
+    </div>
+
+    <!-- 完整释义弹窗 Modal -->
+    <div class="modal-overlay" id="modal-overlay" onclick="closeModal()">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span id="modal-title">📖 完整中文释义</span>
+            </div>
+            <div class="modal-body" id="modal-zh-text"></div>
+            <button class="modal-close-btn" onclick="closeModal()">关闭</button>
         </div>
     </div>
 
@@ -441,13 +546,24 @@
         }
     }
 
+    // 弹窗控制逻辑
+    function openModal(wordEn, wordZh) {
+        document.getElementById('modal-title').innerText = `📖 ${wordEn}`;
+        document.getElementById('modal-zh-text').innerText = wordZh;
+        document.getElementById('modal-overlay').classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('modal-overlay').classList.remove('active');
+    }
+
     // 动态更新提示文字
     swipeToggle.addEventListener('change', () => {
         const hintText = document.getElementById('tap-hint-text');
         if (hintText) {
             hintText.innerText = swipeToggle.checked 
-                ? "👈 左滑忘记 | 点击翻面 | 右滑记住 👉" 
-                : "点击卡片查看释义";
+                ? "点击卡片查看释义" 
+                : "👈 左滑忘记 | 点击翻面 | 右滑记住 👉";
         }
     });
 
@@ -496,7 +612,7 @@
 
     function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
-        if (e.target.closest('.play-btn')) return;
+        if (e.target.closest('.play-btn') || e.target.closest('#back-zh')) return;
 
         resetDragState();
         isDragging = true;
@@ -522,8 +638,7 @@
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
-        // 仅在开启“快捷滑动”时显现印章
-        if (swipeToggle.checked) {
+        if (!swipeToggle.checked) { // 👈 只有关闭开关（允许手势）时才显示印章
             if (currentX > 20) {
                 badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
                 badgeForgot.style.opacity = 0;
@@ -562,14 +677,12 @@
 
         currentCard.classList.add('card-animate');
 
-        // 快捷滑动开关判断逻辑
-        if (swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
+        if (!swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
             handleSwipe('right');
-        } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
+        } else if (!swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
             handleSwipe('left');
         } else {
-            // 开关未打开，或滑动未越过阈值时，自动平滑弹回原位
-            resetCardPosition();
+            resetCardPosition(); // 开启开关后，手势松开一律弹回原位
         }
     }
 
@@ -620,7 +733,6 @@
 
         processAnswerAsync(isRemembered);
 
-        // 延长至 400ms 衔接 0.45s 的平滑飞出动画
         setTimeout(() => {
             currentIndex++;
             showCard();
@@ -661,13 +773,12 @@
     function showCard() {
         resetDragState();
 
-        // 【关键修复 Bug】：切换卡片前禁用 3D 翻转动画，强制归位至正面，防止新卡片展示背面的闪烁
         const cardInner = currentCard.querySelector('.card-inner');
         if (cardInner) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
             cardInner.offsetHeight; // 强制重绘 (Reflow)
-            cardInner.style.transition = ''; // 还原 transition 动画
+            cardInner.style.transition = '';
         }
         isFlipped = false;
 
@@ -689,7 +800,27 @@
         
         document.getElementById('front-en').innerText = word.en;
         document.getElementById('back-en').innerText = word.en;
-        document.getElementById('back-zh').innerText = word.zh;
+        
+        // 渲染中文释义，并根据长短调控字号
+        const backZh = document.getElementById('back-zh');
+        backZh.innerText = word.zh;
+        
+        if (word.zh.length > 50) {
+            backZh.style.fontSize = "15px";
+        } else if (word.zh.length > 25) {
+            backZh.style.fontSize = "17px";
+        } else {
+            backZh.style.fontSize = "20px";
+        }
+
+        // 点击中文触发完整释义弹窗
+        backZh.onclick = (e) => {
+            e.stopPropagation(); // 阻止卡片翻面
+            if (word.zh) {
+                openModal(word.en, word.zh);
+            }
+        };
+
         document.getElementById('back-sub').innerText = word.sub;
         
         const frontPhonetic = document.getElementById('front-phonetic');
@@ -720,7 +851,7 @@
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
 
-        playVoice();
+        // playVoice();
     }
 
     async function preloadPhoneticsBackground() {
