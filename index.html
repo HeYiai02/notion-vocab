@@ -434,58 +434,81 @@
         document.addEventListener('pointercancel', onPointerUp);
     }
 
+    // ==================== 全局拖拽状态重置函数 ====================
+    function resetDragState() {
+        isDragging = false;
+        startX = 0;
+        startY = 0;
+        currentX = 0;
+        currentY = 0;
+    }
+
+    // ==================== 手势事件监听 ====================
     function onPointerDown(e) {
+        // 动画未结束、无单词或点击的是发音按钮，直接忽略
         if (currentIndex >= dueList.length || isAnimating) return;
-        // 如果点击的是声音按钮，不触发拖拽
         if (e.target.closest('.play-btn')) return;
 
+        // 按下时先强制重置状态，防止继承旧坐标
+        resetDragState();
+        
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
-        currentX = 0;
-        currentY = 0;
+        
+        // 绑定指针捕获，防止快速滑动时丢失释放事件
+        try {
+            currentCard.setPointerCapture(e.pointerId);
+        } catch(err) {}
+
         currentCard.classList.remove('card-animate');
     }
 
     function onPointerMove(e) {
-        if (!isDragging) return;
-        currentX = e.clientX - startX;
-        currentY = e.clientY - startY;
-        
-        // 旋转角度与透明度计算
-        const rotate = currentX * 0.08;
-        const opacity = 1 - Math.abs(currentX) / 500;
-        
-        // 顶层卡片跟随手势位移、旋转并微虚化
-        currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
-        currentCard.style.opacity = opacity;
+    if (!isDragging || isAnimating) return;
+    
+    currentX = e.clientX - startX;
+    currentY = e.clientY - startY;
+    
+    const rotate = currentX * 0.08;
+    const opacity = 1 - Math.abs(currentX) / 500;
+    
+    currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
+    currentCard.style.opacity = opacity;
 
-        // 滑动提示印章显隐
-        if (currentX > 20) {
-            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
-            badgeForgot.style.opacity = 0;
-        } else if (currentX < -20) {
-            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
-            badgeRemember.style.opacity = 0;
-        } else {
-            badgeRemember.style.opacity = 0;
-            badgeForgot.style.opacity = 0;
-        }
-
-        // 底层卡片缩放与去模糊动画
-        const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
-        nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
-        nextCard.style.opacity = 0.6 + 0.4 * progress;
-        nextCard.style.filter = `blur(${1 - progress}px)`;
+    // 印章显隐
+    if (currentX > 20) {
+        badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
+        badgeForgot.style.opacity = 0;
+    } else if (currentX < -20) {
+        badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
+        badgeRemember.style.opacity = 0;
+    } else {
+        badgeRemember.style.opacity = 0;
+        badgeForgot.style.opacity = 0;
     }
+
+    // 底层卡片缩放与去模糊
+    const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
+    nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
+    nextCard.style.opacity = 0.6 + 0.4 * progress;
+    nextCard.style.filter = `blur(${1 - progress}px)`;
+    }   
 
     function onPointerUp(e) {
         if (!isDragging) return;
         isDragging = false;
 
+        // 释放指针捕获
+        try {
+            if (currentCard.hasPointerCapture(e.pointerId)) {
+                currentCard.releasePointerCapture(e.pointerId);
+            }
+        } catch(err) {}
+
         const distance = Math.hypot(currentX, currentY);
 
-        // 如果拖拽位移极小，视为“点击”，进行卡片 3D 翻面
+        // 位移极小视作点击，触发卡片翻面
         if (distance < 8) {
             resetCardPosition();
             toggleFlip();
@@ -502,6 +525,7 @@
             resetCardPosition();
         }
     }
+
 
     function resetCardPosition() {
         currentCard.classList.add('card-animate');
@@ -530,36 +554,33 @@
         handleSwipe(direction);
     }
 
-    // 处理卡片滑走逻辑
+    // ==================== 卡片飞出与展示更新 ====================
     function handleSwipe(direction) {
         isAnimating = true;
         const isRemembered = direction === 'right';
         const flyX = isRemembered ? 500 : -500;
         
-        // 显示对应的印章
         if (isRemembered) {
             badgeRemember.style.opacity = '1';
         } else {
             badgeForgot.style.opacity = '1';
         }
 
-        // 卡片飞出视口动画
         currentCard.classList.add('card-animate');
         currentCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
         currentCard.style.opacity = '0';
 
-        // 底层卡片滑入顶层
         nextCard.style.transform = 'scale(1) translateY(0px)';
         nextCard.style.opacity = '1';
         nextCard.style.filter = 'blur(0px)';
 
-        // 【异步静默请求】向 Notion 更新复习进度，不阻塞前端 UI
+        // 后台静默提交 Notion
         processAnswerAsync(isRemembered);
 
         setTimeout(() => {
             currentIndex++;
             showCard();
-            isAnimating = false;
+            isAnimating = false; // 动画完全结束后才释放标志位
         }, 250);
     }
 
@@ -597,6 +618,9 @@
     }
 
     function showCard() {
+        // 切换卡片前，彻底清空拖拽残留
+        resetDragState();
+
         if (currentIndex >= dueList.length) {
             document.getElementById('flashcard-container').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
@@ -613,7 +637,6 @@
 
         const word = dueList[currentIndex];
         
-        // 填充当前卡片数据
         document.getElementById('front-en').innerText = word.en;
         document.getElementById('back-en').innerText = word.en;
         document.getElementById('back-zh').innerText = word.zh;
@@ -626,10 +649,8 @@
         frontPhonetic.innerText = phoneticStr;
         backPhonetic.innerText = phoneticStr;
         
-        // 更新进度条
         document.getElementById('progress').innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
         
-        // 重置顶层卡片状态
         currentCard.classList.remove('card-animate', 'is-flipped');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
@@ -637,7 +658,6 @@
         badgeForgot.style.opacity = '0';
         isFlipped = false;
 
-        // 预填充底层卡片数据
         if (currentIndex + 1 < dueList.length) {
             const nextWord = dueList[currentIndex + 1];
             document.getElementById('next-en').innerText = nextWord.en;
@@ -647,13 +667,12 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        // 重置底层卡片样式
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
 
         playVoice();
-    }
+    }   
 
     // 静默预加载音标
     async function preloadPhoneticsBackground() {
