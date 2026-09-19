@@ -28,18 +28,50 @@
             position: relative;
         }
         
-        /* 右上角快捷滑动开关 */
+        /* 顶部状态栏：包含撤回按钮与快捷开关 */
         .top-bar {
             position: absolute;
             top: 20px;
             left: 20px;
+            right: 20px;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: space-between;
             font-size: 14px;
             font-weight: 500;
             color: var(--text-sub);
             z-index: 100;
+        }
+
+        /* 极简撤回按钮 */
+        .undo-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            opacity: 0;
+            pointer-events: none; /* 无历史时禁用 */
+        }
+        .undo-btn.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .undo-btn:active {
+            background-color: rgba(0, 122, 255, 0.1);
+        }
+
+        .switch-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .switch {
             position: relative;
@@ -79,13 +111,14 @@
             color: var(--text-main);
             font-size: 24px;
             margin-bottom: 10px;
+            margin-top: 15px;
         }
         
         #dashboard {
             text-align: center;
             width: 100%;
             max-width: 360px;
-            margin-top: 50px;
+            margin-top: 40px;
         }
         .stats {
             background: var(--card-bg);
@@ -254,6 +287,13 @@
             border-color: var(--danger);
             transform: rotate(-15deg);
         }
+        .badge-undo {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--primary);
+            border-color: var(--primary);
+        }
 
         .word-header {
             display: flex;
@@ -326,7 +366,6 @@
             color: #C7C7CC;
         }
 
-        /* 完整释义遮罩弹窗 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -443,13 +482,18 @@
 </head>
 <body>
 
-    <!-- 右上角快捷滑动开关 -->
+    <!-- 顶部状态栏 -->
     <div class="top-bar">
-        <span>快捷滑动</span>
-        <label class="switch">
-            <input type="checkbox" id="swipe-toggle" checked>
-            <span class="slider"></span>
-        </label>
+        <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">
+            ↺ 撤回上词
+        </button>
+        <div class="switch-container">
+            <span>快捷滑动</span>
+            <label class="switch">
+                <input type="checkbox" id="swipe-toggle" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
     </div>
 
     <h1>🚀 云端单词卡</h1>
@@ -475,6 +519,7 @@
             <div class="card card-current" id="current-card">
                 <div class="swipe-badge badge-remember" id="badge-remember">记住 🟢</div>
                 <div class="swipe-badge badge-forgot" id="badge-forgot">忘记 🔴</div>
+                <div class="swipe-badge badge-undo" id="badge-undo">撤回 ↺</div>
 
                 <div class="card-inner">
                     <div class="card-face card-front">
@@ -483,7 +528,7 @@
                             <button class="play-btn" onclick="playVoice(event)">🔊</button>
                         </div>
                         <div class="word-phonetic" id="front-phonetic"></div>
-                        <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | 点击翻面 | 右滑记住 👉</div>
+                        <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | 点击翻面 | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(下滑可撤回上一个词)</span></div>
                     </div>
                     <div class="card-face card-back">
                         <div class="word-header">
@@ -527,17 +572,23 @@
     let initialTotal = 0;
     let masteredCount = 0;
 
+    // 历史栈：记录每一次滑走的状态
+    let historyStack = [];
+
     let startX = 0, startY = 0;
     let currentX = 0, currentY = 0;
     let isDragging = false;
     let isAnimating = false;
     const SWIPE_THRESHOLD = 90;
+    const SWIPE_DOWN_THRESHOLD = 100; // 下滑撤回临界距离
 
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
     const badgeRemember = document.getElementById('badge-remember');
     const badgeForgot = document.getElementById('badge-forgot');
+    const badgeUndo = document.getElementById('badge-undo');
     const swipeToggle = document.getElementById('swipe-toggle');
+    const undoBtn = document.getElementById('undo-btn');
 
     function getTodayDateStr() {
         return new Date().toISOString().split('T')[0];
@@ -560,11 +611,23 @@
         localStorage.setItem('review_completed_count', count.toString());
     }
 
-    // 👈 补全 updateProgress 函数
+    function decrementTodayCompleted() {
+        const count = Math.max(0, getTodayCompletedCount() - 1);
+        localStorage.setItem('review_completed_count', count.toString());
+    }
+
     function updateProgress() {
         const progressEl = document.getElementById('progress');
         if (progressEl) {
             progressEl.innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
+        }
+    }
+
+    function updateUndoButtonState() {
+        if (historyStack.length > 0 && currentIndex < dueList.length) {
+            undoBtn.classList.add('active');
+        } else {
+            undoBtn.classList.remove('active');
         }
     }
 
@@ -604,7 +667,6 @@
         }
     }
 
-    // 弹窗控制逻辑
     function openModal(wordEn, wordZh) {
         document.getElementById('modal-title').innerText = `📖 ${wordEn}`;
         document.getElementById('modal-zh-text').innerText = wordZh;
@@ -615,14 +677,13 @@
         document.getElementById('modal-overlay').classList.remove('active');
     }
 
-    // 动态更新提示文字
     swipeToggle.addEventListener('change', () => {
         const actionBtns = document.getElementById('action-buttons');
         const hintText = document.getElementById('tap-hint-text');
 
         if (swipeToggle.checked) {
             if (actionBtns) actionBtns.style.display = 'none';
-            if (hintText) hintText.innerText = "👈 左滑忘记 | 点击翻面 | 右滑记住 👉";
+            if (hintText) hintText.innerHTML = "👈 左滑忘记 | 点击翻面 | 右滑记住 👉<br><span style='font-size:11px; opacity:0.8;'>(下滑可撤回上一个词)</span>";
         } else {
             if (actionBtns) actionBtns.style.display = 'flex';
             if (hintText) hintText.innerText = "点击卡片查看释义（请使用下方按钮操作）";
@@ -704,12 +765,23 @@
 
         if (!swipeToggle.checked) return;
         
+        // 判断主要滑动方向（垂直还是水平）
+        if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
+            // 👈 下滑撤回视觉拖拽
+            currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
+            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
+            badgeRemember.style.opacity = 0;
+            badgeForgot.style.opacity = 0;
+            return;
+        }
+
         const rotate = currentX * 0.08;
         const opacity = 1 - Math.abs(currentX) / 500;
         
-        currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
+        currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
+        badgeUndo.style.opacity = 0;
         if (currentX > 20) {
             badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
             badgeForgot.style.opacity = 0;
@@ -747,6 +819,12 @@
 
         currentCard.classList.add('card-animate');
 
+        // 👈 检查触发下滑撤回手势
+        if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
+            undoLastAction();
+            return;
+        }
+
         if (swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
             handleSwipe('right');
         } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
@@ -762,6 +840,7 @@
         currentCard.style.opacity = '1';
         badgeRemember.style.opacity = '0';
         badgeForgot.style.opacity = '0';
+        badgeUndo.style.opacity = '0';
 
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
@@ -814,6 +893,13 @@
         const word = dueList[currentIndex];
         if (!word) return;
 
+        // 压入历史记录栈
+        historyStack.push({
+            word: { ...word },
+            index: currentIndex,
+            isRemembered: isRemembered
+        });
+
         let newLevel;
         if (isRemembered) {
             newLevel = Math.min(word.level + 1, INTERVALS.length - 1);
@@ -842,6 +928,51 @@
         });
     }
 
+    // 👈 撤回上一次操作逻辑
+    function undoLastAction() {
+        if (historyStack.length === 0 || isAnimating) return;
+        
+        isAnimating = true;
+        const last = historyStack.pop();
+
+        if (last.isRemembered) {
+            decrementTodayCompleted();
+            masteredCount = Math.max(0, masteredCount - 1);
+        } else {
+            // 如果上次选择了“忘记”，当时在队列尾部压入了副本，现在从尾部移除
+            dueList.pop();
+        }
+
+        currentIndex = last.index;
+
+        // 向后台异步恢复 Notion 原始状态（恢复之前的 level，并将日期设为今天）
+        const todayStr = getTodayDateStr();
+        fetch('/api/update_word', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pageId: last.word.pageId,
+                newLevel: last.word.level,
+                nextReviewDate: todayStr
+            })
+        }).catch(err => {
+            console.error(`后台撤回恢复 Notion 失败 [${last.word.en}]:`, err);
+        });
+
+        // 展现卡片飞回动画
+        currentCard.classList.remove('card-animate');
+        currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
+        currentCard.style.opacity = '0';
+
+        setTimeout(() => {
+            showCard();
+            currentCard.classList.add('card-animate');
+            currentCard.style.transform = 'translate3d(0, 0, 0) scale(1)';
+            currentCard.style.opacity = '1';
+            isAnimating = false;
+        }, 50);
+    }
+
     function showCard() {
         resetDragState();
 
@@ -865,6 +996,7 @@
                 </div>
                 <button class="start-btn" onclick="location.reload()">重新加载</button>
             `;
+            updateUndoButtonState();
             return;
         }
 
@@ -901,12 +1033,14 @@
         backPhonetic.innerText = phoneticStr;
         
         updateProgress();
+        updateUndoButtonState();
         
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
         badgeRemember.style.opacity = '0';
         badgeForgot.style.opacity = '0';
+        badgeUndo.style.opacity = '0';
 
         if (currentIndex + 1 < dueList.length) {
             const nextWord = dueList[currentIndex + 1];
