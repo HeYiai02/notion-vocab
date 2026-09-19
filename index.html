@@ -32,7 +32,7 @@
         .top-bar {
             position: absolute;
             top: 20px;
-            left: 20px; /* 👈 这里原先是 right: 20px; */
+            left: 20px;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -134,7 +134,7 @@
             position: relative;
             width: 100%;
             height: 420px;
-            perspective: 1200px; /* 增加 3D 景深 */
+            perspective: 1200px;
             margin-top: 10px;
             touch-action: none;
         }
@@ -182,7 +182,6 @@
             width: 100%;
             height: 100%;
             text-align: center;
-            /* 采用 iOS 风格的自然缓动贝塞尔曲线 */
             transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
             transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d;
@@ -203,7 +202,6 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* 强制隐藏旋转背面的元素 */
             -webkit-backface-visibility: hidden !important;
             backface-visibility: hidden !important;
             background: var(--card-bg);
@@ -289,7 +287,6 @@
             min-height: 24px;
         }
         
-        /* 中文释义超长截断与交互样式 */
         .word-zh {
             font-size: 20px;
             color: var(--text-main);
@@ -297,7 +294,7 @@
             line-height: 1.45;
             max-width: 100%;
             display: -webkit-box;
-            -webkit-line-clamp: 3; /* 最多显示3行，超出省略 */
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -329,7 +326,7 @@
             color: #C7C7CC;
         }
 
-        /* 完整释义遮罩弹窗 (Modal) */
+        /* 完整释义遮罩弹窗 */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -460,8 +457,8 @@
 
     <div id="dashboard" style="display: none;">
         <div class="stats">
-            <p>今日待复习</p>
-            <strong id="due-words">0</strong> 词
+            <p id="dashboard-info">今日待复习</p>
+            <strong id="due-words">0</strong>
         </div>
         <button class="start-btn" id="start-btn">开始复习</button>
     </div>
@@ -552,7 +549,6 @@
         if (savedDate === today) {
             return parseInt(localStorage.getItem('review_completed_count') || '0', 10);
         } else {
-            // 如果跨天（比如到了第二天），自动归零重置
             localStorage.setItem('review_date', today);
             localStorage.setItem('review_completed_count', '0');
             return 0;
@@ -564,30 +560,39 @@
         localStorage.setItem('review_completed_count', count.toString());
     }
 
+    // 👈 补全 updateProgress 函数
+    function updateProgress() {
+        const progressEl = document.getElementById('progress');
+        if (progressEl) {
+            progressEl.innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
+        }
+    }
 
     window.onload = async () => {
         document.getElementById('loading').style.display = 'block';
         try {
             const res = await fetch('/api/get_words');
             dueList = await res.json();
-            // 假设获取到的待复习列表为 dueList
+            
             const remainingCount = dueList.length;
             const todayCompleted = getTodayCompletedCount();
             const totalCount = remainingCount + todayCompleted;
 
-            // 更新仪表盘文字（例：今日待复习 10 词 | 今日已完成 10/20 词）
-            const countEl = document.getElementById('due-count');
-            if (countEl) {
+            const dueWordsEl = document.getElementById('due-words');
+            const dashboardInfoEl = document.getElementById('dashboard-info');
+            
+            if (dueWordsEl && dashboardInfoEl) {
                 if (totalCount === 0) {
-                    countEl.innerText = "🎉 今日无待复习单词！";
+                    dashboardInfoEl.innerText = "今日任务状态";
+                    dueWordsEl.innerText = "🎉 无待复习单词";
                 } else {
-                    countEl.innerText = `今日待复习: ${remainingCount} 词 (已完成: ${todayCompleted} / ${totalCount})`;
+                    dashboardInfoEl.innerText = `今日待复习 (已完成 ${todayCompleted}/${totalCount})`;
+                    dueWordsEl.innerText = `${remainingCount} 词`;
                 }
             }
 
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('due-words').innerText = dueList.length;
 
             if (dueList.length === 0) {
                 document.getElementById('start-btn').innerText = "任务已完成，太棒了！";
@@ -616,11 +621,9 @@
         const hintText = document.getElementById('tap-hint-text');
 
         if (swipeToggle.checked) {
-            // 开启快捷滑动：隐藏底部按钮
             if (actionBtns) actionBtns.style.display = 'none';
             if (hintText) hintText.innerText = "👈 左滑忘记 | 点击翻面 | 右滑记住 👉";
         } else {
-            // 关闭快捷滑动：显示底部按钮
             if (actionBtns) actionBtns.style.display = 'flex';
             if (hintText) hintText.innerText = "点击卡片查看释义（请使用下方按钮操作）";
         }
@@ -629,7 +632,6 @@
     document.getElementById('start-btn').addEventListener('click', () => {
         if(dueList.length === 0) return;
         const todayCompleted = getTodayCompletedCount();
-        // 总数 = 本地已完成数 + 当前剩余待复习数
         initialTotal = dueList.length + todayCompleted; 
         masteredCount = todayCompleted;
 
@@ -642,11 +644,10 @@
         document.getElementById('flashcard-container').style.display = 'flex';
         document.getElementById('progress').style.display = 'block';
 
-        // 👈 【联动】根据当前开关状态，决定开始复习时是否显示按钮
         document.getElementById('action-buttons').style.display = swipeToggle.checked ? 'none' : 'flex';
         
         initSwipeEvents();
-        updateProgress(); // 更新顶部进度条（例如显示 10/20）
+        updateProgress();
         showCard();
     });
 
@@ -655,13 +656,11 @@
         const word = dueList[currentIndex];
         if (!word) return;
 
-        // 如果当前有正在播放的音频，先强行停止并重置进度
         if (currentAudio) {
             currentAudio.pause();
             currentAudio.currentTime = 0;
         }
 
-        // 创建新音频并播放
         currentAudio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
         currentAudio.play().catch(() => {});
     }
@@ -703,7 +702,6 @@
         currentX = e.clientX - startX;
         currentY = e.clientY - startY;
 
-        // 👈 【关键修复】：如果关闭了快捷滑动开关，直接拦截，不产生任何卡片跟随位移
         if (!swipeToggle.checked) return;
         
         const rotate = currentX * 0.08;
@@ -749,7 +747,6 @@
 
         currentCard.classList.add('card-animate');
 
-        // 👈 【关键修复】：只有开启开关且滑动距离超过阈值时才触发判定
         if (swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
             handleSwipe('right');
         } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
@@ -852,7 +849,7 @@
         if (cardInner) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            cardInner.offsetHeight; // 强制重绘 (Reflow)
+            cardInner.offsetHeight;
             cardInner.style.transition = '';
         }
         isFlipped = false;
@@ -876,7 +873,6 @@
         document.getElementById('front-en').innerText = word.en;
         document.getElementById('back-en').innerText = word.en;
         
-        // 渲染中文释义，并根据长短调控字号
         const backZh = document.getElementById('back-zh');
         backZh.innerText = word.zh;
         
@@ -888,9 +884,8 @@
             backZh.style.fontSize = "20px";
         }
 
-        // 点击中文触发完整释义弹窗
         backZh.onclick = (e) => {
-            e.stopPropagation(); // 阻止卡片翻面
+            e.stopPropagation();
             if (word.zh) {
                 openModal(word.en, word.zh);
             }
@@ -905,7 +900,7 @@
         frontPhonetic.innerText = phoneticStr;
         backPhonetic.innerText = phoneticStr;
         
-        document.getElementById('progress').innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
+        updateProgress();
         
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
@@ -925,10 +920,7 @@
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
-
-        // playVoice();
     }
-
 
 </script>
 </body>
