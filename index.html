@@ -506,7 +506,7 @@
             background-color: #001938;
             box-shadow: 0 2px 6px rgba(0, 37, 84, 0.2);
         }
-        .cambridge-badge {
+        /* .cambridge-badge {
             background-color: var(--cambridge-red);
             color: #FFFFFF;
             font-size: 10px;
@@ -515,6 +515,12 @@
             border-radius: 4px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
+        } */
+        .cambridge-logo {
+            height: 18px;
+            width: auto;
+            display: inline-block;
+            vertical-align: middle;
         }
     </style>
 </head>
@@ -589,8 +595,15 @@
         </div>
 
         <!-- 剑桥词典直达按钮 -->
-        <button class="cambridge-btn" onclick="openCambridgeDict()">
+        <!-- <button class="cambridge-btn" onclick="openCambridgeDict()">
             <span class="cambridge-badge">Cambridge</span>
+            <span>在剑桥词典中查看</span>
+            <span style="font-size: 11px; opacity: 0.8;">↗</span>
+        </button> -->
+
+        <!-- 剑桥词典直达按钮 (图片 Logo 版) -->
+        <button class="cambridge-btn" onclick="openCambridgeDict()">
+            <img src="./cambridge-logo.svg" alt="Cambridge Logo" class="cambridge-logo">
             <span>在剑桥词典中查看</span>
             <span style="font-size: 11px; opacity: 0.8;">↗</span>
         </button>
