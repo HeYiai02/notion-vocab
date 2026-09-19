@@ -528,7 +528,7 @@
     window.onload = async () => {
         document.getElementById('loading').style.display = 'block';
         try {
-            const res = await fetch('/.netlify/functions/get_words');
+            const res = await fetch('/api/get_words');
             dueList = await res.json();
             
             document.getElementById('loading').style.display = 'none';
@@ -538,9 +538,8 @@
             if (dueList.length === 0) {
                 document.getElementById('start-btn').innerText = "任务已完成，太棒了！";
                 document.getElementById('start-btn').disabled = true;
-            } else {
-                preloadPhoneticsBackground(); 
             }
+
         } catch (err) {
             document.getElementById('loading').innerText = "获取数据失败，请检查配置。";
         }
@@ -757,7 +756,7 @@
         const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
         const nextReviewDate = nextDate.toISOString().split('T')[0];
 
-        fetch('/.netlify/functions/update_word', {
+        fetch('/api/update_word', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -854,31 +853,7 @@
         // playVoice();
     }
 
-    async function preloadPhoneticsBackground() {
-        for (let i = 0; i < dueList.length; i++) {
-            const word = dueList[i];
-            if (!word.phonetic && !word.en.includes(" ")) {
-                try {
-                    const res = await fetch(`/.netlify/functions/get_phonetic?word=${encodeURIComponent(word.en)}`);
-                    const data = await res.json();
-                    const apiPhonetic = data.usphone || data.ukphone || "";
-                    
-                    if (apiPhonetic) {
-                        word.phonetic = apiPhonetic; 
-                        const pStr = `[${apiPhonetic}]`;
-                        if (currentIndex === i) {
-                            document.getElementById('front-phonetic').innerText = pStr;
-                            document.getElementById('back-phonetic').innerText = pStr;
-                        } else if (currentIndex + 1 === i) {
-                            document.getElementById('next-phonetic').innerText = pStr;
-                        }
-                    }
-                } catch (err) {
-                    console.error("预加载音标失败", err);
-                }
-            }
-        }
-    }
+
 </script>
 </body>
 </html>
