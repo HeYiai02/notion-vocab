@@ -5,41 +5,290 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的云端单词卡</title>
     <style>
-        :root { --primary: #007AFF; --success: #34C759; --danger: #FF3B30; --bg: #F2F2F7; --card-bg: #FFFFFF; --text-main: #1C1C1E; --text-sub: #8E8E93; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
-        h1 { color: var(--text-main); font-size: 24px; margin-bottom: 10px; }
+        :root {
+            --primary: #007AFF;
+            --success: #34C759;
+            --danger: #FF3B30;
+            --bg: #F2F2F7;
+            --card-bg: #FFFFFF;
+            --text-main: #1C1C1E;
+            --text-sub: #8E8E93;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+        h1 {
+            color: var(--text-main);
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
         
-        #dashboard { text-align: center; width: 100%; max-width: 400px; margin-top: 50px; }
-        .stats { background: var(--card-bg); padding: 15px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .stats p { margin: 5px 0; color: var(--text-sub); }
-        .stats strong { color: var(--primary); font-size: 24px; }
-        .start-btn { display: inline-block; width: 100%; padding: 15px; background: var(--primary); color: white; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: 20px; border: none; }
+        #dashboard {
+            text-align: center;
+            width: 100%;
+            max-width: 360px;
+            margin-top: 50px;
+        }
+        .stats {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .stats p {
+            margin: 5px 0;
+            color: var(--text-sub);
+            font-size: 15px;
+        }
+        .stats strong {
+            color: var(--primary);
+            font-size: 32px;
+        }
+        .start-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 16px;
+            background: var(--primary);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 20px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,122,255,0.25);
+            transition: opacity 0.2s;
+        }
+        .start-btn:active {
+            opacity: 0.85;
+        }
 
-        #flashcard-container { display: none; width: 100%; max-width: 400px; height: 60vh; perspective: 1000px; margin-top: 20px; }
-        .card { width: 100%; height: 100%; position: relative; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1); transform-style: preserve-3d; cursor: pointer; }
-        .card.is-flipped { transform: rotateY(180deg); }
-        .card-face { position: absolute; width: 100%; height: 100%; -webkit-backface-visibility: hidden; backface-visibility: hidden; background: var(--card-bg); border-radius: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; text-align: center; }
-        .card-back { transform: rotateY(180deg); }
-        
-        /* 单词与发音按钮的排版 */
-        .word-header { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 5px; }
-        .word-en { font-size: 36px; font-weight: bold; color: var(--text-main); }
-        .play-btn { background: none; border: none; font-size: 28px; cursor: pointer; padding: 0; transition: transform 0.1s; }
-        .play-btn:active { transform: scale(0.9); }
-        .word-phonetic { font-size: 18px; color: var(--primary); margin-bottom: 15px; font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif; }
-        
-        .word-zh { font-size: 24px; color: var(--text-main); margin-bottom: 15px; }
-        .word-sub { font-size: 16px; color: var(--text-sub); line-height: 1.5; }
-        .tap-hint { position: absolute; bottom: 20px; font-size: 14px; color: #C7C7CC; }
+        #flashcard-container {
+            display: none;
+            width: 100%;
+            max-width: 360px;
+            margin-top: 10px;
+            flex-direction: column;
+            align-items: center;
+        }
 
-        #action-buttons { display: none; width: 100%; max-width: 400px; justify-content: space-between; margin-top: 30px; gap: 15px; }
-        .action-btn { flex: 1; padding: 15px 0; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; }
+        /* 3D 卡片层叠堆叠容器 */
+        .card-stack {
+            position: relative;
+            width: 100%;
+            height: 420px;
+            perspective: 1000px;
+            margin-top: 10px;
+            touch-action: none;
+        }
+
+        .card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+            box-sizing: border-box;
+            user-select: none;
+            touch-action: none;
+            will-change: transform, opacity, filter;
+        }
+
+        /* 底层预览卡片 */
+        .card-next {
+            z-index: 1;
+            transform: scale(0.92) translateY(15px);
+            opacity: 0.6;
+            filter: blur(1px);
+            transition: transform 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            text-align: center;
+        }
+
+        /* 顶层可拖拽卡片 */
+        .card-current {
+            z-index: 2;
+            cursor: grab;
+            transform-style: preserve-3d;
+        }
+
+        .card-current:active {
+            cursor: grabbing;
+        }
+
+        /* 卡片翻转 3D 容器 */
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            border-radius: 20px;
+        }
+
+        .card-current.is-flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            background: var(--card-bg);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+        }
+
+        .card-animate {
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+        }
+
+        /* 滑动提示印章 (徽章) */
+        .swipe-badge {
+            position: absolute;
+            top: 20px;
+            padding: 6px 16px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            border: 2px solid;
+            opacity: 0;
+            transition: opacity 0.1s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .badge-remember {
+            right: 20px;
+            color: var(--success);
+            border-color: var(--success);
+            transform: rotate(15deg);
+        }
+        .badge-forgot {
+            left: 20px;
+            color: var(--danger);
+            border-color: var(--danger);
+            transform: rotate(-15deg);
+        }
+
+        /* 单词与发音排版 */
+        .word-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 5px;
+        }
+        .word-en {
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--text-main);
+            word-break: break-word;
+        }
+        .play-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.1s;
+        }
+        .play-btn:active {
+            transform: scale(0.9);
+        }
+        .word-phonetic {
+            font-size: 18px;
+            color: var(--primary);
+            margin-bottom: 15px;
+            font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
+            min-height: 24px;
+        }
+        
+        .word-zh {
+            font-size: 22px;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+        .word-sub {
+            font-size: 15px;
+            color: var(--text-sub);
+            line-height: 1.5;
+        }
+        .tap-hint {
+            position: absolute;
+            bottom: 20px;
+            font-size: 13px;
+            color: #C7C7CC;
+        }
+
+        /* 底部按钮栏 (支持手机拖拽 + 桌面点击) */
+        #action-buttons {
+            display: none;
+            width: 100%;
+            max-width: 360px;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 15px;
+        }
+        .action-btn {
+            flex: 1;
+            padding: 14px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            transition: transform 0.1s, opacity 0.2s;
+        }
+        .action-btn:active {
+            transform: scale(0.96);
+        }
         .btn-forgot { background-color: var(--danger); }
         .btn-remember { background-color: var(--success); }
         .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        #progress { margin-top: 20px; color: var(--text-sub); font-size: 15px; display: none; font-weight: bold; }
-        #loading { display: none; margin-top: 50px; color: var(--primary); font-weight: bold; }
+        #progress {
+            margin-top: 15px;
+            color: var(--text-sub);
+            font-size: 15px;
+            display: none;
+            font-weight: bold;
+        }
+        #loading {
+            display: none;
+            margin-top: 50px;
+            color: var(--primary);
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -56,35 +305,52 @@
     </div>
 
     <div id="flashcard-container">
-        <div class="card" id="card">
-            <!-- 卡片正面 -->
-            <div class="card-face card-front">
-                <div class="word-header">
-                    <div class="word-en" id="front-en"></div>
-                    <button class="play-btn" onclick="playVoice(event)">🔊</button>
-                </div>
-                <div class="word-phonetic" id="front-phonetic"></div>
-                <div class="tap-hint">点击卡片翻看释义</div>
+        <!-- 卡片堆叠区 -->
+        <div class="card-stack" id="card-stack">
+            <!-- 底层卡片 (预览层) -->
+            <div class="card card-next" id="next-card">
+                <div class="word-en" id="next-en">Loading...</div>
+                <div class="word-phonetic" id="next-phonetic"></div>
             </div>
-            <!-- 卡片背面 -->
-            <div class="card-face card-back">
-                <div class="word-header">
-                    <div class="word-en" id="back-en"></div>
-                    <button class="play-btn" onclick="playVoice(event)">🔊</button>
+            
+            <!-- 顶层卡片 (拖拽与翻转层) -->
+            <div class="card card-current" id="current-card">
+                <!-- 拖拽提示印章 -->
+                <div class="swipe-badge badge-remember" id="badge-remember">记住 🟢</div>
+                <div class="swipe-badge badge-forgot" id="badge-forgot">忘记 🔴</div>
+
+                <div class="card-inner">
+                    <!-- 正面 -->
+                    <div class="card-face card-front">
+                        <div class="word-header">
+                            <div class="word-en" id="front-en"></div>
+                            <button class="play-btn" onclick="playVoice(event)">🔊</button>
+                        </div>
+                        <div class="word-phonetic" id="front-phonetic"></div>
+                        <div class="tap-hint">👈 左滑忘记 | 点击翻面 | 右滑记住 👉</div>
+                    </div>
+                    <!-- 背面 -->
+                    <div class="card-face card-back">
+                        <div class="word-header">
+                            <div class="word-en" id="back-en"></div>
+                            <button class="play-btn" onclick="playVoice(event)">🔊</button>
+                        </div>
+                        <div class="word-phonetic" id="back-phonetic"></div>
+                        <div class="word-zh" id="back-zh"></div>
+                        <div class="word-sub" id="back-sub"></div>
+                    </div>
                 </div>
-                <div class="word-phonetic" id="back-phonetic"></div>
-                <div class="word-zh" id="back-zh"></div>
-                <div class="word-sub" id="back-sub"></div>
             </div>
         </div>
-    </div>
-    
-    <!-- 进度条 -->
-    <div id="progress"></div>
 
-    <div id="action-buttons">
-        <button class="action-btn btn-forgot" id="btn-forgot" onclick="handleAnswer(false)">忘记了 🔴</button>
-        <button class="action-btn btn-remember" id="btn-remember" onclick="handleAnswer(true)">记住了 🟢</button>
+        <!-- 进度条 -->
+        <div id="progress"></div>
+
+        <!-- 辅助操作按钮 (支持手势+点击双模式) -->
+        <div id="action-buttons">
+            <button class="action-btn btn-forgot" id="btn-forgot" onclick="triggerSwipe('left')">忘记了 🔴</button>
+            <button class="action-btn btn-remember" id="btn-remember" onclick="triggerSwipe('right')">记住了 🟢</button>
+        </div>
     </div>
 
 <script>
@@ -94,8 +360,20 @@
     let isFlipped = false;
     
     // 进度计数器
-    let initialTotal = 0;   // 今天的总任务数（不会变）
+    let initialTotal = 0;   // 今天的总任务数
     let masteredCount = 0;  // 已经记住的个数
+
+    // 手势交互相关变量
+    let startX = 0, startY = 0;
+    let currentX = 0, currentY = 0;
+    let isDragging = false;
+    let isAnimating = false;
+    const SWIPE_THRESHOLD = 90; // 判定滑动成功的像素阈值
+
+    const currentCard = document.getElementById('current-card');
+    const nextCard = document.getElementById('next-card');
+    const badgeRemember = document.getElementById('badge-remember');
+    const badgeForgot = document.getElementById('badge-forgot');
 
     window.onload = async () => {
         document.getElementById('loading').style.display = 'block';
@@ -111,7 +389,6 @@
                 document.getElementById('start-btn').innerText = "任务已完成，太棒了！";
                 document.getElementById('start-btn').disabled = true;
             } else {
-                // 【新增这一行】：数据加载完毕后，立刻启动后台静默下载音标！
                 preloadPhoneticsBackground(); 
             }
         } catch (err) {
@@ -122,7 +399,6 @@
     document.getElementById('start-btn').addEventListener('click', () => {
         if(dueList.length === 0) return;
         
-        // 记录今天的总任务数
         initialTotal = dueList.length;
         masteredCount = 0;
 
@@ -133,8 +409,11 @@
         }
         
         document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('flashcard-container').style.display = 'block';
+        document.getElementById('flashcard-container').style.display = 'flex';
+        document.getElementById('action-buttons').style.display = 'flex';
         document.getElementById('progress').style.display = 'block';
+        
+        initSwipeEvents();
         showCard();
     });
 
@@ -143,19 +422,198 @@
         if (e) e.stopPropagation(); // 阻止点击喇叭时触发卡片翻转
         const word = dueList[currentIndex];
         if (!word) return;
-        // 调用有道词典美音 API (type=2)
         const audio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
-        audio.play();
+        audio.play().catch(() => {});
+    }
+
+    // 初始化手势事件 (Pointer Events 兼容触屏与鼠标)
+    function initSwipeEvents() {
+        currentCard.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
+    }
+
+    function onPointerDown(e) {
+        if (currentIndex >= dueList.length || isAnimating) return;
+        // 如果点击的是声音按钮，不触发拖拽
+        if (e.target.closest('.play-btn')) return;
+
+        isDragging = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        currentX = 0;
+        currentY = 0;
+        currentCard.classList.remove('card-animate');
+    }
+
+    function onPointerMove(e) {
+        if (!isDragging) return;
+        currentX = e.clientX - startX;
+        currentY = e.clientY - startY;
+        
+        // 旋转角度与透明度计算
+        const rotate = currentX * 0.08;
+        const opacity = 1 - Math.abs(currentX) / 500;
+        
+        // 顶层卡片跟随手势位移、旋转并微虚化
+        currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.3}px, 0) rotate(${rotate}deg)`;
+        currentCard.style.opacity = opacity;
+
+        // 滑动提示印章显隐
+        if (currentX > 20) {
+            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
+            badgeForgot.style.opacity = 0;
+        } else if (currentX < -20) {
+            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
+            badgeRemember.style.opacity = 0;
+        } else {
+            badgeRemember.style.opacity = 0;
+            badgeForgot.style.opacity = 0;
+        }
+
+        // 底层卡片缩放与去模糊动画
+        const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
+        nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
+        nextCard.style.opacity = 0.6 + 0.4 * progress;
+        nextCard.style.filter = `blur(${1 - progress}px)`;
+    }
+
+    function onPointerUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        const distance = Math.hypot(currentX, currentY);
+
+        // 如果拖拽位移极小，视为“点击”，进行卡片 3D 翻面
+        if (distance < 8) {
+            resetCardPosition();
+            toggleFlip();
+            return;
+        }
+
+        currentCard.classList.add('card-animate');
+
+        if (currentX > SWIPE_THRESHOLD) {
+            handleSwipe('right');
+        } else if (currentX < -SWIPE_THRESHOLD) {
+            handleSwipe('left');
+        } else {
+            resetCardPosition();
+        }
+    }
+
+    function resetCardPosition() {
+        currentCard.classList.add('card-animate');
+        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+        currentCard.style.opacity = '1';
+        badgeRemember.style.opacity = '0';
+        badgeForgot.style.opacity = '0';
+
+        nextCard.style.transform = 'scale(0.92) translateY(15px)';
+        nextCard.style.opacity = '0.6';
+        nextCard.style.filter = 'blur(1px)';
+    }
+
+    function toggleFlip() {
+        isFlipped = !isFlipped;
+        if (isFlipped) {
+            currentCard.classList.add('is-flipped');
+        } else {
+            currentCard.classList.remove('is-flipped');
+        }
+    }
+
+    // 通过底部按钮调起的滑动动画
+    function triggerSwipe(direction) {
+        if (isAnimating || currentIndex >= dueList.length) return;
+        handleSwipe(direction);
+    }
+
+    // 处理卡片滑走逻辑
+    function handleSwipe(direction) {
+        isAnimating = true;
+        const isRemembered = direction === 'right';
+        const flyX = isRemembered ? 500 : -500;
+        
+        // 显示对应的印章
+        if (isRemembered) {
+            badgeRemember.style.opacity = '1';
+        } else {
+            badgeForgot.style.opacity = '1';
+        }
+
+        // 卡片飞出视口动画
+        currentCard.classList.add('card-animate');
+        currentCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
+        currentCard.style.opacity = '0';
+
+        // 底层卡片滑入顶层
+        nextCard.style.transform = 'scale(1) translateY(0px)';
+        nextCard.style.opacity = '1';
+        nextCard.style.filter = 'blur(0px)';
+
+        // 【异步静默请求】向 Notion 更新复习进度，不阻塞前端 UI
+        processAnswerAsync(isRemembered);
+
+        setTimeout(() => {
+            currentIndex++;
+            showCard();
+            isAnimating = false;
+        }, 250);
+    }
+
+    // 非阻塞异步向后台提交数据
+    function processAnswerAsync(isRemembered) {
+        const word = dueList[currentIndex];
+        if (!word) return;
+
+        let newLevel;
+        if (isRemembered) {
+            newLevel = Math.min(word.level + 1, INTERVALS.length - 1);
+            masteredCount++;
+        } else {
+            newLevel = 0;
+            // 忘记了的单词塞回队尾重复复习
+            dueList.push({ ...word, level: 0 });
+        }
+
+        const daysToAdd = INTERVALS[newLevel];
+        const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
+        const nextReviewDate = nextDate.toISOString().split('T')[0];
+
+        // 完全在后台运行的异步请求
+        fetch('/.netlify/functions/update_word', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pageId: word.pageId,
+                newLevel: newLevel,
+                nextReviewDate: nextReviewDate
+            })
+        }).catch(err => {
+            console.error(`后台写入 Notion 失败 [${word.en}]:`, err);
+        });
     }
 
     function showCard() {
         if (currentIndex >= dueList.length) {
-            // ... 省略结束复习的 UI 代码 ...
+            document.getElementById('flashcard-container').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('dashboard').innerHTML = `
+                <div class="stats">
+                    <h2>🎉 太棒了！</h2>
+                    <p>今日任务已全部完成</p>
+                    <p style="margin-top:10px;">累计掌握: <strong>${masteredCount}</strong> 词</p>
+                </div>
+                <button class="start-btn" onclick="location.reload()">重新加载</button>
+            `;
             return;
         }
 
         const word = dueList[currentIndex];
         
+        // 填充当前卡片数据
         document.getElementById('front-en').innerText = word.en;
         document.getElementById('back-en').innerText = word.en;
         document.getElementById('back-zh').innerText = word.zh;
@@ -164,105 +622,64 @@
         const frontPhonetic = document.getElementById('front-phonetic');
         const backPhonetic = document.getElementById('back-phonetic');
         
-        // 【极简音标逻辑】：现在不需要在展示卡片时去 Fetch 了！
-        if (word.phonetic) {
-            // 如果 Notion 填了，或者后台预加载已经拿到了，瞬间秒显！
-            const phoneticStr = `[${word.phonetic.replace(/\//g, '')}]`;
-            frontPhonetic.innerText = phoneticStr;
-            backPhonetic.innerText = phoneticStr;
-        } else {
-            // 如果是短语，或者用户手速太快预加载还没跑到这一个，直接留空，不弹讨厌的[获取中]
-            frontPhonetic.innerText = "";
-            backPhonetic.innerText = "";
-        }
+        const phoneticStr = word.phonetic ? `[${word.phonetic.replace(/\//g, '')}]` : "";
+        frontPhonetic.innerText = phoneticStr;
+        backPhonetic.innerText = phoneticStr;
         
+        // 更新进度条
         document.getElementById('progress').innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
         
-        const card = document.getElementById('card');
-        card.classList.remove('is-flipped');
+        // 重置顶层卡片状态
+        currentCard.classList.remove('card-animate', 'is-flipped');
+        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+        currentCard.style.opacity = '1';
+        badgeRemember.style.opacity = '0';
+        badgeForgot.style.opacity = '0';
         isFlipped = false;
-        document.getElementById('action-buttons').style.display = 'none';
-        
-        document.getElementById('btn-forgot').disabled = false;
-        document.getElementById('btn-remember').disabled = false;
-        document.getElementById('btn-forgot').innerText = "忘记了 🔴";
-        document.getElementById('btn-remember').innerText = "记住了 🟢";
+
+        // 预填充底层卡片数据
+        if (currentIndex + 1 < dueList.length) {
+            const nextWord = dueList[currentIndex + 1];
+            document.getElementById('next-en').innerText = nextWord.en;
+            document.getElementById('next-phonetic').innerText = nextWord.phonetic ? `[${nextWord.phonetic.replace(/\//g, '')}]` : "";
+        } else {
+            document.getElementById('next-en').innerText = "已经是最后一张啦 🎉";
+            document.getElementById('next-phonetic').innerText = "";
+        }
+
+        // 重置底层卡片样式
+        nextCard.style.transform = 'scale(0.92) translateY(15px)';
+        nextCard.style.opacity = '0.6';
+        nextCard.style.filter = 'blur(1px)';
 
         playVoice();
     }
 
-    // 静默预加载函数
+    // 静默预加载音标
     async function preloadPhoneticsBackground() {
         for (let i = 0; i < dueList.length; i++) {
             const word = dueList[i];
-            // 如果 Notion 里没填，且不是短语（没有空格），才去请求
             if (!word.phonetic && !word.en.includes(" ")) {
                 try {
-                    // 偷偷去请求
                     const res = await fetch(`/.netlify/functions/get_phonetic?word=${encodeURIComponent(word.en)}`);
                     const data = await res.json();
                     const apiPhonetic = data.usphone || data.ukphone || "";
                     
                     if (apiPhonetic) {
-                        // 拿到后直接存入内存！
                         word.phonetic = apiPhonetic; 
-                        
-                        // 极端情况：如果用户手速极快，后台还在加载时他已经翻到了这张卡，直接动态帮他显示出来
+                        const pStr = `[${apiPhonetic}]`;
                         if (currentIndex === i) {
-                            const pStr = `[${apiPhonetic}]`;
                             document.getElementById('front-phonetic').innerText = pStr;
                             document.getElementById('back-phonetic').innerText = pStr;
+                        } else if (currentIndex + 1 === i) {
+                            document.getElementById('next-phonetic').innerText = pStr;
                         }
                     }
                 } catch (err) {
-                    console.error("预加载失败", err);
+                    console.error("预加载音标失败", err);
                 }
             }
         }
-    }
-
-    document.getElementById('card').addEventListener('click', () => {
-        if (isFlipped) return;
-        document.getElementById('card').classList.add('is-flipped');
-        isFlipped = true;
-        setTimeout(() => { document.getElementById('action-buttons').style.display = 'flex'; }, 300);
-    });
-
-    async function handleAnswer(isRemembered) {
-        const word = dueList[currentIndex];
-        
-        document.getElementById('btn-forgot').disabled = true;
-        document.getElementById('btn-remember').disabled = true;
-        
-        let newLevel;
-        if (isRemembered) {
-            document.getElementById('btn-remember').innerText = "保存中...";
-            newLevel = Math.min(word.level + 1, INTERVALS.length - 1);
-            masteredCount++; // 【修复】只有真正记住了，掌握进度才 +1
-        } else {
-            document.getElementById('btn-forgot').innerText = "保存中...";
-            newLevel = 0;
-            // 【修复】忘记了的单词塞回队尾，等会儿继续复习
-            dueList.push({ ...word, level: 0 }); 
-        }
-
-        const daysToAdd = INTERVALS[newLevel];
-        const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
-        const nextReviewDate = nextDate.toISOString().split('T')[0];
-
-        // 提交云端
-        await fetch('/.netlify/functions/update_word', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                pageId: word.pageId,
-                newLevel: newLevel,
-                nextReviewDate: nextReviewDate
-            })
-        });
-
-        currentIndex++;
-        showCard();
     }
 </script>
 </body>
