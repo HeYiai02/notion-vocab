@@ -191,7 +191,6 @@
             -webkit-backface-visibility: hidden !important; backface-visibility: hidden !important;
             background: var(--card-bg); border-radius: 20px; display: flex; flex-direction: column;
             justify-content: center; align-items: center; padding: 24px; box-sizing: border-box; text-align: center;
-            /* 👈 终极防掉帧：强制 GPU 提前为两面绘制纹理，即使背面处于隐藏状态也必须绘制预备着 */
             will-change: transform;
             -webkit-transform-style: preserve-3d;
             transform-style: preserve-3d;
@@ -601,7 +600,6 @@
         resetDragState();
         isDragging = true;
         
-        // 兼容 touches 数组
         startX = e.touches ? e.touches[0].clientX : e.clientX; 
         startY = e.touches ? e.touches[0].clientY : e.clientY; 
         downTarget = e.target;
@@ -611,6 +609,7 @@
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
         currentCard.offsetHeight; 
+        
         clearBadgeStatesInstant();
     }
 
@@ -826,7 +825,7 @@
         }
 
         clearBadgeStatesInstant();
-        currentCard.style.transition = ''; // 确保撤回时也有动画
+        currentCard.style.transition = ''; 
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
         currentCard.style.opacity = '0';
@@ -848,7 +847,7 @@
         if (cardInner) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            cardInner.offsetHeight; // 强制重排
+            cardInner.offsetHeight; 
             
             setTimeout(() => {
                 cardInner.style.transition = '';
@@ -895,11 +894,15 @@
         
         updateProgress();
         updateUndoButtonState();
+
+        // 👈 【核心黑科技：解决首帧翻页卡顿】
+        // 在填入文字后，立刻在不可见状态下瞬间翻转并恢复，迫使 Safari GPU 立即绘制背面纹理！
+        currentCard.classList.add('is-flipped');
+        currentCard.offsetHeight; // 强制 GPU 绘制背面
+        currentCard.classList.remove('is-flipped');
+        currentCard.offsetHeight; // 恢复正面
         
         currentCard.style.transition = ''; 
-        currentCard.classList.remove('card-animate');
-        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-        currentCard.style.opacity = '1';
 
         if (currentIndex + 1 < dueList.length) {
             const nextWord = dueList[currentIndex + 1];
