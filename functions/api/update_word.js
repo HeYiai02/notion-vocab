@@ -6,7 +6,7 @@ export async function onRequestPost(context) {
     return new Response(JSON.stringify({ error: "环境变量 NOTION_SECRET 未配置" }), { status: 500 });
   }
 
-  // 密码校验逻辑：如果设置了密码，强校验密码；若未配置密码，阻止写操作以防误操作
+  // 严格鉴权：未设置密码或密码不匹配均拦截
   const reqPassword = context.request.headers.get("X-Auth-Password");
   if (!AUTH_PASSWORD || reqPassword !== AUTH_PASSWORD) {
     return new Response(JSON.stringify({ error: "未授权：密码错误或服务未配置管理员密码" }), {
