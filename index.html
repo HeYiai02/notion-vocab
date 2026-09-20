@@ -296,41 +296,49 @@
             border-color: var(--primary);
         }
 
-        /* 稳定无抖动的标题与喇叭布局 */
+        /* 👈 彻底消除推动抖动：绝对对称的三栏标题布局 */
         .word-header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
-            margin-bottom: 5px;
+            justify-content: space-between;
             width: 100%;
+            margin-bottom: 5px;
+        }
+        .header-spacer {
+            width: 36px;
+            height: 36px;
+            flex-shrink: 0;
         }
         .word-en {
+            flex: 1;
             font-size: 32px;
             font-weight: bold;
             color: var(--text-main);
+            text-align: center;
             word-break: break-word;
+            padding: 0 4px;
         }
         .play-btn {
             background: none;
             border: none;
-            font-size: 26px;
+            color: var(--primary);
             cursor: pointer;
             padding: 0;
             width: 36px;
             height: 36px;
-            line-height: 36px;
             flex-shrink: 0;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.1s;
+            border-radius: 50%;
+            transition: transform 0.1s, background-color 0.2s;
         }
         .play-btn:active {
             transform: scale(0.9);
+            background-color: rgba(0, 122, 255, 0.1);
         }
 
-        /* 固定的音标占位行，防止高低跳变 */
+        /* 固定的音标占位行 */
         .word-phonetic {
             font-size: 18px;
             color: var(--primary);
@@ -580,18 +588,27 @@
                 <div class="swipe-badge badge-undo" id="badge-undo">撤回 ↺</div>
 
                 <div class="card-inner">
+                    <!-- 卡片正面 -->
                     <div class="card-face card-front">
                         <div class="word-header">
+                            <div class="header-spacer"></div>
                             <div class="word-en" id="front-en"></div>
-                            <button class="play-btn" onclick="playVoice(event)">🔊</button>
+                            <button class="play-btn" onclick="playVoice(event)" title="播放发音">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            </button>
                         </div>
                         <div class="word-phonetic" id="front-phonetic"></div>
                         <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | 点击翻面 | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(下滑可撤回上一个词)</span></div>
                     </div>
+                    
+                    <!-- 卡片背面 -->
                     <div class="card-face card-back">
                         <div class="word-header">
+                            <div class="header-spacer"></div>
                             <div class="word-en" id="back-en"></div>
-                            <button class="play-btn" onclick="playVoice(event)">🔊</button>
+                            <button class="play-btn" onclick="playVoice(event)" title="播放发音">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                            </button>
                         </div>
                         <div class="word-phonetic" id="back-phonetic"></div>
                         <div class="word-zh" id="back-zh" title="点击查看完整释义"></div>
@@ -612,7 +629,7 @@
             <span style="font-size: 11px; opacity: 0.8;">↗</span>
         </button>
 
-        <!-- 纯绿色进度条（不带任何文字） -->
+        <!-- 纯绿色进度条 -->
         <div id="progress-bar-container" class="progress-bar-container">
             <div id="progress-bar-fill" class="progress-bar-fill"></div>
         </div>
@@ -682,7 +699,6 @@
         localStorage.setItem('review_completed_count', count.toString());
     }
 
-    // 更新纯绿色进度条的扩展宽度
     function updateProgress() {
         const percent = initialTotal > 0 ? (masteredCount / initialTotal) * 100 : 0;
         const fillEl = document.getElementById('progress-bar-fill');
