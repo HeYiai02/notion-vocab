@@ -16,6 +16,15 @@
             --cambridge-blue: #002554;
             --cambridge-red: #D0021B;
         }
+
+        /* 👈 关键修复：强制锁死根视口宽度，禁止正数 X 轴位移撑大全页 */
+        html, body {
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden !important;
+            position: relative;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
@@ -26,8 +35,6 @@
             align-items: center;
             min-height: 100vh;
             box-sizing: border-box;
-            overflow-x: hidden;
-            position: relative;
         }
         
         /* 顶部状态栏 */
@@ -156,6 +163,7 @@
             opacity: 0.85;
         }
 
+        /* 👈 容器层限制溢出裁切 */
         #flashcard-container {
             display: none;
             width: 100%;
@@ -163,6 +171,7 @@
             margin-top: 10px;
             flex-direction: column;
             align-items: center;
+            overflow-x: clip;
         }
 
         .card-stack {
@@ -294,7 +303,6 @@
             border-color: var(--primary);
         }
 
-        /* 单词本身样式 */
         .word-en {
             font-size: 34px;
             font-weight: bold;
@@ -622,7 +630,7 @@
     let currentX = 0, currentY = 0;
     let isDragging = false;
     let isAnimating = false;
-    let downTarget = null; // 👈 关键修复：记住按下瞬间点中的真实节点
+    let downTarget = null;
     const SWIPE_THRESHOLD = 90;
     const SWIPE_DOWN_THRESHOLD = 100;
 
@@ -803,7 +811,7 @@
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
-        downTarget = e.target; // 👈 捕获并保存按下的元素
+        downTarget = e.target;
 
         try {
             currentCard.setPointerCapture(e.pointerId);
@@ -864,15 +872,12 @@
 
         const distance = Math.hypot(currentX, currentY);
 
-        // 判断点击（位移小于8px）
         if (distance < 8) {
             resetCardPosition();
-            
-            // 👈 通过 downTarget 精确精准分流
             if (downTarget && downTarget.closest('.word-en')) {
-                playVoice();  // 点击单词只读音
+                playVoice();
             } else {
-                toggleFlip(); // 点击空白处才翻面
+                toggleFlip();
             }
             downTarget = null;
             return;
@@ -1117,13 +1122,9 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        nextCard.style.transition = 'none'; // 暂时关闭动画
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
-        // 强制浏览器应用样式（Reflow）后，恢复动画平滑过渡
-        nextCard.offsetHeight; 
-        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
     }
 
 </script>
