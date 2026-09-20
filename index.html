@@ -28,7 +28,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             margin: 0;
-            padding: 20px;
+            padding: 12px 20px 20px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -36,18 +36,17 @@
             box-sizing: border-box;
         }
         
+        /* 顶部左右功能栏 */
         .top-bar {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            right: 20px;
+            width: 100%;
+            max-width: 360px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             font-size: 14px;
             font-weight: 500;
             color: var(--text-sub);
-            z-index: 100;
+            margin-top: 4px;
         }
 
         .switch-container {
@@ -104,9 +103,41 @@
         .undo-btn.active { opacity: 1; pointer-events: auto; }
         .undo-btn:active { background-color: rgba(0, 122, 255, 0.1); }
 
-        h1 { color: var(--text-main); font-size: 24px; margin-bottom: 10px; margin-top: 15px; }
+        /* 标题正上方的身份模式状态栏 */
+        .auth-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 14px;
+            margin-bottom: 2px;
+        }
+        .role-badge {
+            font-size: 12px;
+            padding: 3px 10px;
+            border-radius: 12px;
+            background: #E5E5EA;
+            color: #8E8E93;
+            font-weight: 600;
+        }
+        .auth-btn {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            padding: 2px 6px;
+        }
+
+        h1 {
+            color: var(--text-main);
+            font-size: 24px;
+            margin-bottom: 10px;
+            margin-top: 6px;
+        }
         
-        #dashboard { text-align: center; width: 100%; max-width: 360px; margin-top: 40px; }
+        #dashboard { text-align: center; width: 100%; max-width: 360px; margin-top: 20px; }
         .stats { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .stats p { margin: 5px 0; color: var(--text-sub); font-size: 15px; }
         .stats strong { color: var(--primary); font-size: 32px; }
@@ -215,6 +246,7 @@
 </head>
 <body>
 
+    <!-- 1. 顶栏：左侧开关 + 右侧撤回按钮 -->
     <div class="top-bar">
         <div class="switch-container">
             <span>快捷滑动</span>
@@ -223,13 +255,16 @@
                 <span class="slider"></span>
             </label>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-            <span id="role-badge" style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #E5E5EA; color: #8E8E93;">👤 游客模式</span>
-            <button id="auth-btn" onclick="toggleAuthModal()" style="background: none; border: none; color: var(--primary); font-size: 13px; font-weight: bold; cursor: pointer;">🔐 解锁同步</button>
-            <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">↺ 撤回上词</button>
-        </div>
+        <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">↺ 撤回上词</button>
     </div>
 
+    <!-- 2. 标题正上方的模式状态与解锁按钮 -->
+    <div class="auth-bar">
+        <span id="role-badge" class="role-badge">👤 游客模式</span>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 输入密码</button>
+    </div>
+
+    <!-- 3. 主标题 -->
     <h1>🚀 云端单词卡</h1>
     <div id="loading">正在连接 Notion 获取数据...</div>
 
@@ -345,7 +380,7 @@
         }
     }
 
-    // 👈 向后端真实验证密码
+    // 向后端校验密码
     async function toggleAuthModal() {
         if (!isVisitorMode) {
             if (confirm("确定要退出管理员模式，切换回游客模式吗？")) {
@@ -440,7 +475,6 @@
     window.onload = async () => {
         document.getElementById('loading').style.display = 'block';
         try {
-            // 👈 游客模式自动带上 ?mode=visitor 拉取随机体验词组
             const apiUrl = isVisitorMode ? '/api/get_words?mode=visitor' : '/api/get_words';
             const res = await fetch(apiUrl);
             dueList = await res.json();
@@ -680,7 +714,6 @@
             dueList.push({ ...word, level: 0 });
         }
 
-        // 👈 游客模式直接拦截，只保留本地记录，不同步 Notion
         if (isVisitorMode) {
             console.log("【游客模式】仅本地保存记录，跳过 Notion 同步");
             return; 
