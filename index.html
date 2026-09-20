@@ -150,7 +150,6 @@
         }
         .start-btn:active { opacity: 0.85; }
 
-        /* 👈 关键优化：允许自由延伸，不硬切卡片边框与阴影 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
             flex-direction: column; align-items: center;
@@ -159,7 +158,6 @@
 
         .card-stack { position: relative; width: 100%; height: 420px; perspective: 1200px; margin-top: 10px; touch-action: none; }
         
-        /* 👈 关键优化：柔化阴影，添加 GPU 抗锯齿轮廓 */
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
             border-radius: 20px;
@@ -167,7 +165,7 @@
             box-sizing: border-box;
             user-select: none; touch-action: none; will-change: transform, opacity, filter;
             border: none !important;
-            outline: 1px solid transparent; /* 消除 WebKit 3D 旋转时的 1px 锯齿边框线 */
+            outline: 1px solid transparent;
         }
         .card-next {
             z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
@@ -340,7 +338,6 @@
     </div>
 
 <script>
-    // 全局状态管理
     let userPassword = sessionStorage.getItem('user_password') || '';
     let isVisitorMode = !userPassword;
 
@@ -389,7 +386,6 @@
         }
     }
 
-    // 向后端校验密码
     async function toggleAuthModal() {
         if (!isVisitorMode) {
             if (confirm("确定要退出管理员模式，切换回游客模式吗？")) {
@@ -574,7 +570,10 @@
         currentAudio.play().catch(err => console.error("音频播放失败:", err));
     }
 
-    function resetDragState() { isDragging = false; startX = 0; startY = 0; currentX = 0; currentY = 0; }
+    function resetDragState() {
+        isDragging = false;
+        startX = 0; startY = 0; currentX = 0; currentY = 0;
+    }
 
     function initSwipeEvents() {
         currentCard.addEventListener('pointerdown', onPointerDown);
@@ -583,43 +582,56 @@
         document.addEventListener('pointercancel', onPointerUp);
     }
 
+    // 👈 【关键修复】：按下瞬间重置所有状态与类名
     function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
+        
         resetDragState();
         isDragging = true;
-        startX = e.clientX; startY = e.clientY; downTarget = e.target;
+        startX = e.clientX; 
+        startY = e.clientY; 
+        downTarget = e.target;
+
         try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
+        
+        // 瞬间清空过渡动画，保证跟随手指
         currentCard.classList.remove('card-animate');
+        clearBadgeStatesInstant();
     }
 
+    // 👈 【关键修复】：实时无延迟更新印章 opacity
     function onPointerMove(e) {
         if (!isDragging || isAnimating) return;
-        currentX = e.clientX - startX; currentY = e.clientY - startY;
+        
+        currentX = e.clientX - startX; 
+        currentY = e.clientY - startY;
+
         if (!swipeToggle.checked) return;
         
         if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
             badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
-            badgeRemember.style.opacity = 0; badgeForgot.style.opacity = 0;
+            badgeRemember.style.opacity = '0'; 
+            badgeForgot.style.opacity = '0';
             return;
         }
 
         const rotate = currentX * 0.08;
-        // 👈 优化平滑淡出逻辑
         const opacity = Math.max(0, 1 - Math.abs(currentX) / 320);
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
-        badgeUndo.style.opacity = 0;
+        badgeUndo.style.opacity = '0';
         if (currentX > 20) {
-            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
-            badgeForgot.style.opacity = 0;
+            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1).toString();
+            badgeForgot.style.opacity = '0';
         } else if (currentX < -20) {
-            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
-            badgeRemember.style.opacity = 0;
+            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1).toString();
+            badgeRemember.style.opacity = '0';
         } else {
-            badgeRemember.style.opacity = 0; badgeForgot.style.opacity = 0;
+            badgeRemember.style.opacity = '0'; 
+            badgeForgot.style.opacity = '0';
         }
 
         const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
@@ -662,9 +674,12 @@
         currentCard.classList.add('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
-        badgeRemember.style.opacity = '0'; badgeForgot.style.opacity = '0'; badgeUndo.style.opacity = '0';
+        
+        clearBadgeStatesWithTransition();
+
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
-        nextCard.style.opacity = '0.6'; nextCard.style.filter = 'blur(1px)';
+        nextCard.style.opacity = '0.6'; 
+        nextCard.style.filter = 'blur(1px)';
     }
 
     function toggleFlip() {
@@ -689,22 +704,33 @@
         currentCard.style.opacity = '0';
 
         nextCard.style.transform = 'scale(1) translateY(0px)';
-        nextCard.style.opacity = '1'; nextCard.style.filter = 'blur(0px)';
+        nextCard.style.opacity = '1'; 
+        nextCard.style.filter = 'blur(0px)';
 
         processAnswerAsync(isRemembered);
 
         setTimeout(() => {
             currentIndex++;
-            clearBadgeStates();
+            clearBadgeStatesInstant();
             showCard();
             isAnimating = false;
         }, 400);
     }
 
-    function clearBadgeStates() {
-        [badgeRemember, badgeForgot, badgeUndo].forEach(b => { b.style.transition = 'none'; b.style.opacity = '0'; });
-        badgeRemember.offsetHeight;
-        [badgeRemember, badgeForgot, badgeUndo].forEach(b => { b.style.transition = 'opacity 0.1s ease'; });
+    // 👈 彻底修复印章 transition 冲突：瞬间归零，不设 CSS 过渡
+    function clearBadgeStatesInstant() {
+        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
+            b.style.transition = 'none';
+            b.style.opacity = '0';
+        });
+    }
+
+    // 放手复位时使用渐隐过渡
+    function clearBadgeStatesWithTransition() {
+        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
+            b.style.transition = 'opacity 0.2s ease';
+            b.style.opacity = '0';
+        });
     }
 
     function processAnswerAsync(isRemembered) {
@@ -775,7 +801,7 @@
             }).catch(err => { console.error(`后台撤回失败 [${last.word.en}]:`, err); });
         }
 
-        clearBadgeStates();
+        clearBadgeStatesInstant();
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
         currentCard.style.opacity = '0';
@@ -791,6 +817,7 @@
 
     function showCard() {
         resetDragState();
+        clearBadgeStatesInstant();
 
         const cardInner = currentCard.querySelector('.card-inner');
         if (cardInner) {
