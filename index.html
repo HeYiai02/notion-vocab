@@ -30,7 +30,7 @@
             position: relative;
         }
         
-        /* 顶部状态栏：快捷开关居左，撤回按钮居右 */
+        /* 顶部状态栏 */
         .top-bar {
             position: absolute;
             top: 20px;
@@ -207,7 +207,6 @@
             transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d;
         }
-
         .card-current:active {
             cursor: grabbing;
         }
@@ -225,7 +224,6 @@
             transform: translateZ(0);
             -webkit-transform: translateZ(0);
         }
-
         .card-current.is-flipped .card-inner {
             transform: rotateY(180deg);
             -webkit-transform: rotateY(180deg);
@@ -296,49 +294,26 @@
             border-color: var(--primary);
         }
 
-        /* 👈 彻底消除推动抖动：绝对对称的三栏标题布局 */
-        .word-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            width: 100%;
-            margin-bottom: 5px;
-        }
-        .header-spacer {
-            width: 36px;
-            height: 36px;
-            flex-shrink: 0;
-        }
+        /* 👈 修复后的单词样式：自带发音交互反馈，彻底消除排版抖动 */
         .word-en {
-            flex: 1;
-            font-size: 32px;
+            font-size: 34px;
             font-weight: bold;
             color: var(--text-main);
             text-align: center;
             word-break: break-word;
-            padding: 0 4px;
-        }
-        .play-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
+            padding: 8px 20px;
+            border-radius: 12px;
             cursor: pointer;
-            padding: 0;
-            width: 36px;
-            height: 36px;
-            flex-shrink: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 50%;
-            transition: transform 0.1s, background-color 0.2s;
+            margin-bottom: 2px;
+            transition: transform 0.1s, color 0.15s, background-color 0.15s;
         }
-        .play-btn:active {
-            transform: scale(0.9);
-            background-color: rgba(0, 122, 255, 0.1);
+        /* 当用户手指按下单词时的特效 */
+        .word-en:active {
+            transform: scale(0.92);
+            color: var(--primary);
+            background-color: rgba(0, 122, 255, 0.06);
         }
 
-        /* 固定的音标占位行 */
         .word-phonetic {
             font-size: 18px;
             color: var(--primary);
@@ -380,11 +355,14 @@
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
         }
+        
+        /* 更新提示文案，区分点击对象 */
         .tap-hint {
             position: absolute;
             bottom: 20px;
             font-size: 13px;
             color: #C7C7CC;
+            line-height: 1.5;
         }
 
         .modal-overlay {
@@ -575,7 +553,7 @@
 
     <div id="flashcard-container">
         <div class="card-stack" id="card-stack">
-            <!-- 底层卡片 -->
+            <!-- 底层卡片：完美的对称布局 -->
             <div class="card card-next" id="next-card">
                 <div class="word-en" id="next-en">Loading...</div>
                 <div class="word-phonetic" id="next-phonetic"></div>
@@ -590,26 +568,14 @@
                 <div class="card-inner">
                     <!-- 卡片正面 -->
                     <div class="card-face card-front">
-                        <div class="word-header">
-                            <div class="header-spacer"></div>
-                            <div class="word-en" id="front-en"></div>
-                            <button class="play-btn" onclick="playVoice(event)" title="播放发音">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                            </button>
-                        </div>
+                        <div class="word-en" id="front-en" title="点击播放发音"></div>
                         <div class="word-phonetic" id="front-phonetic"></div>
-                        <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | 点击翻面 | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(下滑可撤回上一个词)</span></div>
+                        <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | <span style="color:var(--primary);">点击单词发音</span> | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(点击空白处翻面 / 下滑撤回上一个词)</span></div>
                     </div>
                     
                     <!-- 卡片背面 -->
                     <div class="card-face card-back">
-                        <div class="word-header">
-                            <div class="header-spacer"></div>
-                            <div class="word-en" id="back-en"></div>
-                            <button class="play-btn" onclick="playVoice(event)" title="播放发音">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-                            </button>
-                        </div>
+                        <div class="word-en" id="back-en" title="点击播放发音"></div>
                         <div class="word-phonetic" id="back-phonetic"></div>
                         <div class="word-zh" id="back-zh" title="点击查看完整释义"></div>
                         <div class="word-sub" id="back-sub"></div>
@@ -775,10 +741,10 @@
 
         if (swipeToggle.checked) {
             if (actionBtns) actionBtns.style.display = 'none';
-            if (hintText) hintText.innerHTML = "👈 左滑忘记 | 点击翻面 | 右滑记住 👉<br><span style='font-size:11px; opacity:0.8;'>(下滑可撤回上一个词)</span>";
+            if (hintText) hintText.innerHTML = "👈 左滑忘记 | <span style='color:var(--primary);'>点击单词发音</span> | 右滑记住 👉<br><span style='font-size:11px; opacity:0.8;'>(点击空白处翻面 / 下滑撤回上一个词)</span>";
         } else {
             if (actionBtns) actionBtns.style.display = 'flex';
-            if (hintText) hintText.innerText = "点击卡片查看释义（请使用下方按钮操作）";
+            if (hintText) hintText.innerText = "点击单词发音 | 点击空白查看释义（请使用下方按钮操作）";
         }
     });
 
@@ -804,8 +770,7 @@
         showCard();
     });
 
-    function playVoice(e) {
-        if (e) e.stopPropagation();
+    function playVoice() {
         const word = dueList[currentIndex];
         if (!word) return;
 
@@ -835,7 +800,8 @@
 
     function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
-        if (e.target.closest('.play-btn') || e.target.closest('#back-zh')) return;
+        // 中文释义区依然保留弹窗响应，排除拖拽
+        if (e.target.closest('#back-zh')) return;
 
         resetDragState();
         isDragging = true;
@@ -901,9 +867,16 @@
 
         const distance = Math.hypot(currentX, currentY);
 
+        // 👈 【核心交互分流】：判断距离小于 8，认为是“点击”而不是“滑动”
         if (distance < 8) {
             resetCardPosition();
-            toggleFlip();
+            
+            // 如果点中了单词，则发音；否则翻面
+            if (e.target.closest('.word-en')) {
+                playVoice();
+            } else {
+                toggleFlip();
+            }
             return;
         }
 
