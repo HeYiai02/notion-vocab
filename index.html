@@ -17,6 +17,7 @@
             --cambridge-red: #D0021B;
         }
 
+        /* 全屏视口锁死，防止产生横向滚动条 */
         html, body {
             width: 100%;
             max-width: 100vw;
@@ -36,6 +37,7 @@
             box-sizing: border-box;
         }
         
+        /* 1. 顶部左右功能栏 */
         .top-bar {
             width: 100%;
             max-width: 360px;
@@ -102,6 +104,7 @@
         .undo-btn.active { opacity: 1; pointer-events: auto; }
         .undo-btn:active { background-color: rgba(0, 122, 255, 0.1); }
 
+        /* 2. 标题正上方的身份模式状态栏 */
         .auth-bar {
             display: flex;
             align-items: center;
@@ -147,6 +150,7 @@
         }
         .start-btn:active { opacity: 0.85; }
 
+        /* 关键优化：允许自由延伸，不硬切卡片边框与阴影 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
             flex-direction: column; align-items: center;
@@ -174,10 +178,12 @@
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            /* 👈 优化翻面动画为 iOS 级高级阻尼曲线 */
+            /* 优化翻面动画为 iOS 级高级阻尼曲线 */
             transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
-            transform: translateZ(0); -webkit-transform: translateZ(0);
+            /* 👈 【核心修复1】：加入微小预检旋转，强制提前生成 3D 纹理缓存，解决首帧卡顿 */
+            transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg); 
+            -webkit-transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg);
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
@@ -254,7 +260,6 @@
     <!-- 1. 顶栏：左侧开关 + 右侧撤回按钮 -->
     <div class="top-bar">
         <div class="switch-container">
-            <span>快捷滑动</span>
             <label class="switch">
                 <input type="checkbox" id="swipe-toggle" checked>
                 <span class="slider"></span>
@@ -574,6 +579,7 @@
     }
 
     function initSwipeEvents() {
+        // 双轨制事件绑定：同时监听 pointer 和 touch
         currentCard.addEventListener('pointerdown', onPointerDown);
         currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
         
@@ -586,12 +592,15 @@
         document.addEventListener('touchcancel', onPointerUp);
     }
 
+    // 按下瞬间重置所有状态与类名
     function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
         
         resetDragState();
         isDragging = true;
+        
+        // 兼容 touches 数组
         startX = e.touches ? e.touches[0].clientX : e.clientX; 
         startY = e.touches ? e.touches[0].clientY : e.clientY; 
         downTarget = e.target;
@@ -601,14 +610,17 @@
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
         currentCard.offsetHeight; 
+        
         clearBadgeStatesInstant();
     }
 
+    // 实时无延迟更新印章 opacity
     function onPointerMove(e) {
         if (!isDragging || isAnimating) return;
         
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
         currentX = clientX - startX; 
         currentY = clientY - startY;
 
@@ -653,12 +665,22 @@
         const distance = Math.hypot(currentX, currentY);
         if (distance < 8) {
             resetCardPosition();
-            if (downTarget && downTarget.closest('.word-en')) { playVoice(); } else { toggleFlip(); }
+            if (downTarget && downTarget.closest('.word-en')) { 
+                playVoice(); 
+            } else { 
+                // 👈 【核心修复2】：延迟两帧触发翻转，避开父级节点复位引发的重绘冲突
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        toggleFlip(); 
+                    });
+                });
+            }
             downTarget = null;
             return;
         }
 
         downTarget = null;
+        currentCard.classList.add('card-animate');
 
         if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
             undoLastAction();
@@ -675,7 +697,6 @@
     }
 
     function resetCardPosition() {
-        // 👈 核心修复：在此处解开锁死的 transition:none，让 CSS 接管回弹动画
         currentCard.style.transition = ''; 
         currentCard.classList.add('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
@@ -705,7 +726,6 @@
         
         if (isRemembered) { badgeRemember.style.opacity = '1'; } else { badgeForgot.style.opacity = '1'; }
 
-        // 👈 核心修复：滑动飞出时同样需要解开锁死的 transition:none
         currentCard.style.transition = ''; 
         currentCard.classList.add('card-animate');
         currentCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
@@ -830,8 +850,12 @@
         if (cardInner) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            cardInner.offsetHeight;
-            cardInner.style.transition = '';
+            cardInner.offsetHeight; // 强制重排
+            
+            // 👈 【核心修复3】：给 GPU 留出 30ms 消化重排的时间，再恢复动画
+            setTimeout(() => {
+                cardInner.style.transition = '';
+            }, 30);
         }
         isFlipped = false;
 
@@ -875,7 +899,6 @@
         updateProgress();
         updateUndoButtonState();
         
-        // 👈 兜底修复：确保新卡片展示时，过渡控制权交还给 CSS
         currentCard.style.transition = ''; 
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
