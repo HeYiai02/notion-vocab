@@ -1,15 +1,15 @@
 export async function onRequestPost(context) {
   const NOTION_SECRET = context.env.NOTION_SECRET;
-  const AUTH_PASSWORD = context.env.AUTH_PASSWORD; // 获取设置的密码
+  const AUTH_PASSWORD = context.env.AUTH_PASSWORD;
 
   if (!NOTION_SECRET) {
     return new Response(JSON.stringify({ error: "环境变量 NOTION_SECRET 未配置" }), { status: 500 });
   }
 
-  // 👈 密码校验逻辑：如果设置了密码，且前端传来的密码不匹配，拦截更新
+  // 密码校验逻辑：如果设置了密码，强校验密码；若未配置密码，阻止写操作以防误操作
   const reqPassword = context.request.headers.get("X-Auth-Password");
-  if (AUTH_PASSWORD && reqPassword !== AUTH_PASSWORD) {
-    return new Response(JSON.stringify({ error: "游客模式只读，无法修改 Notion 数据库" }), {
+  if (!AUTH_PASSWORD || reqPassword !== AUTH_PASSWORD) {
+    return new Response(JSON.stringify({ error: "未授权：密码错误或服务未配置管理员密码" }), {
       status: 403,
       headers: { "Content-Type": "application/json; charset=utf-8" }
     });
