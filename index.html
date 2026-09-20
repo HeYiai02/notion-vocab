@@ -181,7 +181,6 @@
             /* 优化翻面动画为 iOS 级高级阻尼曲线 */
             transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
-            /* 👈 【核心修复1】：加入微小预检旋转，强制提前生成 3D 纹理缓存，解决首帧卡顿 */
             transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg); 
             -webkit-transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg);
         }
@@ -192,6 +191,10 @@
             -webkit-backface-visibility: hidden !important; backface-visibility: hidden !important;
             background: var(--card-bg); border-radius: 20px; display: flex; flex-direction: column;
             justify-content: center; align-items: center; padding: 24px; box-sizing: border-box; text-align: center;
+            /* 👈 终极防掉帧：强制 GPU 提前为两面绘制纹理，即使背面处于隐藏状态也必须绘制预备着 */
+            will-change: transform;
+            -webkit-transform-style: preserve-3d;
+            transform-style: preserve-3d;
         }
         .card-front { transform: rotateY(0deg) translateZ(1px); -webkit-transform: rotateY(0deg) translateZ(1px); }
         .card-back { transform: rotateY(180deg) translateZ(1px); -webkit-transform: rotateY(180deg) translateZ(1px); }
@@ -579,7 +582,6 @@
     }
 
     function initSwipeEvents() {
-        // 双轨制事件绑定：同时监听 pointer 和 touch
         currentCard.addEventListener('pointerdown', onPointerDown);
         currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
         
@@ -592,7 +594,6 @@
         document.addEventListener('touchcancel', onPointerUp);
     }
 
-    // 按下瞬间重置所有状态与类名
     function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
@@ -610,11 +611,9 @@
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
         currentCard.offsetHeight; 
-        
         clearBadgeStatesInstant();
     }
 
-    // 实时无延迟更新印章 opacity
     function onPointerMove(e) {
         if (!isDragging || isAnimating) return;
         
@@ -668,7 +667,6 @@
             if (downTarget && downTarget.closest('.word-en')) { 
                 playVoice(); 
             } else { 
-                // 👈 【核心修复2】：延迟两帧触发翻转，避开父级节点复位引发的重绘冲突
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         toggleFlip(); 
@@ -852,7 +850,6 @@
             currentCard.classList.remove('is-flipped');
             cardInner.offsetHeight; // 强制重排
             
-            // 👈 【核心修复3】：给 GPU 留出 30ms 消化重排的时间，再恢复动画
             setTimeout(() => {
                 cardInner.style.transition = '';
             }, 30);
