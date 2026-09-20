@@ -540,9 +540,12 @@
                 <span class="slider"></span>
             </label>
         </div>
-        <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">
-            ↺ 撤回上词
-        </button>
+        <!-- 👈 新增：身份状态与登录切换 -->
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="role-badge" style="font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #E5E5EA; color: #8E8E93;">👤 游客模式</span>
+            <button id="auth-btn" onclick="toggleAuthModal()" style="background: none; border: none; color: var(--primary); font-size: 13px; font-weight: bold; cursor: pointer;">🔐 解锁同步</button>
+            <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">↺ 撤回上词</button>
+        </div>
     </div>
 
     <h1>🚀 云端单词卡</h1>
@@ -615,6 +618,10 @@
     </div>
 
 <script>
+    // 全局状态管理
+    let userPassword = sessionStorage.getItem('user_password') || '';
+    let isVisitorMode = !userPassword;
+
     let currentAudio = null;
     const INTERVALS = [0, 1, 2, 4, 7, 15, 30]; 
     let dueList = [];
@@ -641,6 +648,53 @@
     const badgeUndo = document.getElementById('badge-undo');
     const swipeToggle = document.getElementById('swipe-toggle');
     const undoBtn = document.getElementById('undo-btn');
+    // 更新状态栏标识
+    function updateRoleUI() {
+        const roleBadge = document.getElementById('role-badge');
+        const authBtn = document.getElementById('auth-btn');
+        if (!isVisitorMode) {
+            if (roleBadge) {
+                roleBadge.innerText = '⚡ 同步模式';
+                roleBadge.style.background = 'rgba(52, 199, 89, 0.15)';
+                roleBadge.style.color = '#34C759';
+            }
+            if (authBtn) authBtn.innerText = '🔒 退出';
+        } else {
+            if (roleBadge) {
+                roleBadge.innerText = '👤 游客模式';
+                roleBadge.style.background = '#E5E5EA';
+                roleBadge.style.color = '#8E8E93';
+            }
+            if (authBtn) authBtn.innerText = '🔐 解锁同步';
+        }
+    }
+
+    // 输入密码解锁
+    function toggleAuthModal() {
+        if (!isVisitorMode) {
+            if (confirm("确定要退出管理员模式，切换回游客模式吗？")) {
+                sessionStorage.removeItem('user_password');
+                userPassword = '';
+                isVisitorMode = true;
+                updateRoleUI();
+            }
+            return;
+        }
+
+        const input = prompt("请输入管理员密码（取消则保持游客模式）：");
+        if (input !== null && input.trim() !== '') {
+            userPassword = input.trim();
+            sessionStorage.setItem('user_password', userPassword);
+            isVisitorMode = false;
+            updateRoleUI();
+            alert("已切换为管理员模式！做出的复习修改将实时同步至 Notion。");
+        }
+    }
+
+    // 页面加载时刷新状态 UI
+    window.addEventListener('DOMContentLoaded', () => {
+        updateRoleUI();
+    });
 
     function getTodayDateStr() {
         return new Date().toISOString().split('T')[0];
@@ -980,7 +1034,7 @@
         let newLevel;
         if (isRemembered) {
             newLevel = Math.min(word.level + 1, INTERVALS.length - 1);
-            incrementTodayCompleted();
+            incrementTodayCompleted(); // 本地进度依然增加
             masteredCount++;
             updateProgress();
         } else {
@@ -988,13 +1042,23 @@
             dueList.push({ ...word, level: 0 });
         }
 
+        // 👈 核心拦截：如果是游客模式，直接中断，不给后台发请求！
+        if (isVisitorMode) {
+            console.log("【游客模式】仅在本地记录本次卡片状态，跳过 Notion 同步。");
+            return; 
+        }
+
         const daysToAdd = INTERVALS[newLevel];
         const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
         const nextReviewDate = nextDate.toISOString().split('T')[0];
 
+        // 管理员模式：带上 X-Auth-Password 发送写请求
         fetch('/api/update_word', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Auth-Password': userPassword // 👈 带上身份密钥
+            },
             body: JSON.stringify({
                 pageId: word.pageId,
                 newLevel: newLevel,
@@ -1021,6 +1085,7 @@
         currentIndex = last.index;
 
         const todayStr = getTodayDateStr();
+        if (isVisitorMode) return;
         fetch('/api/update_word', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
