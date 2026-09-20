@@ -294,7 +294,7 @@
             border-color: var(--primary);
         }
 
-        /* 👈 修复后的单词样式：自带发音交互反馈，彻底消除排版抖动 */
+        /* 单词本身样式 */
         .word-en {
             font-size: 34px;
             font-weight: bold;
@@ -307,11 +307,10 @@
             margin-bottom: 2px;
             transition: transform 0.1s, color 0.15s, background-color 0.15s;
         }
-        /* 当用户手指按下单词时的特效 */
         .word-en:active {
             transform: scale(0.92);
             color: var(--primary);
-            background-color: rgba(0, 122, 255, 0.06);
+            background-color: rgba(0, 122, 255, 0.08);
         }
 
         .word-phonetic {
@@ -356,7 +355,6 @@
             -webkit-box-orient: vertical;
         }
         
-        /* 更新提示文案，区分点击对象 */
         .tap-hint {
             position: absolute;
             bottom: 20px;
@@ -464,7 +462,6 @@
         .btn-remember { background-color: var(--success); }
         .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* 无文字的极简绿色进度条 */
         .progress-bar-container {
             width: 100%;
             max-width: 360px;
@@ -553,13 +550,11 @@
 
     <div id="flashcard-container">
         <div class="card-stack" id="card-stack">
-            <!-- 底层卡片：完美的对称布局 -->
             <div class="card card-next" id="next-card">
                 <div class="word-en" id="next-en">Loading...</div>
                 <div class="word-phonetic" id="next-phonetic"></div>
             </div>
             
-            <!-- 顶层卡片 -->
             <div class="card card-current" id="current-card">
                 <div class="swipe-badge badge-remember" id="badge-remember">记住 🟢</div>
                 <div class="swipe-badge badge-forgot" id="badge-forgot">忘记 🔴</div>
@@ -568,14 +563,14 @@
                 <div class="card-inner">
                     <!-- 卡片正面 -->
                     <div class="card-face card-front">
-                        <div class="word-en" id="front-en" title="点击播放发音"></div>
+                        <div class="word-en" id="front-en"></div>
                         <div class="word-phonetic" id="front-phonetic"></div>
                         <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | <span style="color:var(--primary);">点击单词发音</span> | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(点击空白处翻面 / 下滑撤回上一个词)</span></div>
                     </div>
                     
                     <!-- 卡片背面 -->
                     <div class="card-face card-back">
-                        <div class="word-en" id="back-en" title="点击播放发音"></div>
+                        <div class="word-en" id="back-en"></div>
                         <div class="word-phonetic" id="back-phonetic"></div>
                         <div class="word-zh" id="back-zh" title="点击查看完整释义"></div>
                         <div class="word-sub" id="back-sub"></div>
@@ -595,7 +590,6 @@
             <span style="font-size: 11px; opacity: 0.8;">↗</span>
         </button>
 
-        <!-- 纯绿色进度条 -->
         <div id="progress-bar-container" class="progress-bar-container">
             <div id="progress-bar-fill" class="progress-bar-fill"></div>
         </div>
@@ -628,6 +622,7 @@
     let currentX = 0, currentY = 0;
     let isDragging = false;
     let isAnimating = false;
+    let downTarget = null; // 👈 关键修复：记住按下瞬间点中的真实节点
     const SWIPE_THRESHOLD = 90;
     const SWIPE_DOWN_THRESHOLD = 100;
 
@@ -772,7 +767,7 @@
 
     function playVoice() {
         const word = dueList[currentIndex];
-        if (!word) return;
+        if (!word || !word.en) return;
 
         if (currentAudio) {
             currentAudio.pause();
@@ -780,7 +775,9 @@
         }
 
         currentAudio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
-        currentAudio.play().catch(() => {});
+        currentAudio.play().catch(err => {
+            console.error("音频播放被拦截或失败:", err);
+        });
     }
 
     function resetDragState() {
@@ -800,14 +797,14 @@
 
     function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
-        // 中文释义区依然保留弹窗响应，排除拖拽
         if (e.target.closest('#back-zh')) return;
 
         resetDragState();
         isDragging = true;
         startX = e.clientX;
         startY = e.clientY;
-        
+        downTarget = e.target; // 👈 捕获并保存按下的元素
+
         try {
             currentCard.setPointerCapture(e.pointerId);
         } catch(err) {}
@@ -867,19 +864,21 @@
 
         const distance = Math.hypot(currentX, currentY);
 
-        // 👈 【核心交互分流】：判断距离小于 8，认为是“点击”而不是“滑动”
+        // 判断点击（位移小于8px）
         if (distance < 8) {
             resetCardPosition();
             
-            // 如果点中了单词，则发音；否则翻面
-            if (e.target.closest('.word-en')) {
-                playVoice();
+            // 👈 通过 downTarget 精确精准分流
+            if (downTarget && downTarget.closest('.word-en')) {
+                playVoice();  // 点击单词只读音
             } else {
-                toggleFlip();
+                toggleFlip(); // 点击空白处才翻面
             }
+            downTarget = null;
             return;
         }
 
+        downTarget = null;
         currentCard.classList.add('card-animate');
 
         if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
