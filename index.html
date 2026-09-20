@@ -13,7 +13,6 @@
             --card-bg: #FFFFFF;
             --text-main: #1C1C1E;
             --text-sub: #8E8E93;
-            /* 剑桥词典经典品牌色 */
             --cambridge-blue: #002554;
             --cambridge-red: #D0021B;
         }
@@ -85,7 +84,7 @@
             transform: translateX(20px);
         }
 
-        /* 极简撤回按钮 (显示在右上角) */
+        /* 极简撤回按钮 */
         .undo-btn {
             background: none;
             border: none;
@@ -274,7 +273,6 @@
             font-weight: bold;
             border: 2px solid;
             opacity: 0;
-            transition: opacity 0.1s ease;
             pointer-events: none;
             z-index: 10;
         }
@@ -298,12 +296,14 @@
             border-color: var(--primary);
         }
 
+        /* 稳定无抖动的标题与喇叭布局 */
         .word-header {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 6px;
             margin-bottom: 5px;
+            width: 100%;
         }
         .word-en {
             font-size: 32px;
@@ -314,20 +314,30 @@
         .play-btn {
             background: none;
             border: none;
-            font-size: 28px;
+            font-size: 26px;
             cursor: pointer;
             padding: 0;
+            width: 36px;
+            height: 36px;
+            line-height: 36px;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             transition: transform 0.1s;
         }
         .play-btn:active {
             transform: scale(0.9);
         }
+
+        /* 固定的音标占位行，防止高低跳变 */
         .word-phonetic {
             font-size: 18px;
             color: var(--primary);
             margin-bottom: 12px;
             font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif;
-            min-height: 24px;
+            height: 24px;
+            line-height: 24px;
         }
         
         .word-zh {
@@ -446,7 +456,7 @@
             width: 100%;
             max-width: 360px;
             justify-content: space-between;
-            margin-top: 15px;
+            margin-top: 12px;
             gap: 15px;
         }
         .action-btn {
@@ -467,14 +477,26 @@
         .btn-forgot { background-color: var(--danger); }
         .btn-remember { background-color: var(--success); }
         .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        #progress {
-            margin-top: 12px;
-            color: var(--text-sub);
-            font-size: 15px;
+
+        /* 无文字的极简绿色进度条 */
+        .progress-bar-container {
+            width: 100%;
+            max-width: 360px;
+            height: 6px;
+            background-color: #E5E5EA;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 16px;
             display: none;
-            font-weight: bold;
         }
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            background-color: var(--success);
+            border-radius: 3px;
+            transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
         #loading {
             display: none;
             margin-top: 50px;
@@ -482,9 +504,8 @@
             font-weight: bold;
         }
 
-        /* 剑桥词典跳转按钮风格 */
         .cambridge-btn {
-            margin-top: 16px;
+            margin-top: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -498,15 +519,14 @@
             font-weight: 600;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(0, 37, 84, 0.2);
-            transition: transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+            transition: transform 0.15s ease, background-color 0.15s ease;
             user-select: none;
         }
         .cambridge-btn:active {
             transform: scale(0.96);
             background-color: #001938;
-            box-shadow: 0 2px 6px rgba(0, 37, 84, 0.2);
         }
-        /* .cambridge-badge {
+        .cambridge-badge {
             background-color: var(--cambridge-red);
             color: #FFFFFF;
             font-size: 10px;
@@ -515,18 +535,12 @@
             border-radius: 4px;
             letter-spacing: 0.5px;
             text-transform: uppercase;
-        } */
-        .cambridge-logo {
-            height: 18px;
-            width: auto;
-            display: inline-block;
-            vertical-align: middle;
         }
     </style>
 </head>
 <body>
 
-    <!-- 顶部状态栏：快捷滑动居左，撤回按钮居右 -->
+    <!-- 顶部状态栏 -->
     <div class="top-bar">
         <div class="switch-container">
             <span>快捷滑动</span>
@@ -587,26 +601,21 @@
             </div>
         </div>
 
-        <div id="progress"></div>
-
         <div id="action-buttons">
             <button class="action-btn btn-forgot" id="btn-forgot" onclick="triggerSwipe('left')">忘记了 🔴</button>
             <button class="action-btn btn-remember" id="btn-remember" onclick="triggerSwipe('right')">记住了 🟢</button>
         </div>
 
-        <!-- 剑桥词典直达按钮 -->
-        <!-- <button class="cambridge-btn" onclick="openCambridgeDict()">
+        <button class="cambridge-btn" onclick="openCambridgeDict()">
             <span class="cambridge-badge">Cambridge</span>
             <span>在剑桥词典中查看</span>
             <span style="font-size: 11px; opacity: 0.8;">↗</span>
-        </button> -->
-
-        <!-- 剑桥词典直达按钮 (图片 Logo 版) -->
-        <button class="cambridge-btn" onclick="openCambridgeDict()">
-            <img src="./cambridge-logo.svg" alt="Cambridge Logo" class="cambridge-logo">
-            <span>在剑桥词典中查看</span>
-            <span style="font-size: 11px; opacity: 0.8;">↗</span>
         </button>
+
+        <!-- 纯绿色进度条（不带任何文字） -->
+        <div id="progress-bar-container" class="progress-bar-container">
+            <div id="progress-bar-fill" class="progress-bar-fill"></div>
+        </div>
     </div>
 
     <!-- 完整释义弹窗 Modal -->
@@ -673,11 +682,11 @@
         localStorage.setItem('review_completed_count', count.toString());
     }
 
+    // 更新纯绿色进度条的扩展宽度
     function updateProgress() {
-        const progressEl = document.getElementById('progress');
-        if (progressEl) {
-            progressEl.innerText = `已掌握: ${masteredCount} / ${initialTotal} 词`;
-        }
+        const percent = initialTotal > 0 ? (masteredCount / initialTotal) * 100 : 0;
+        const fillEl = document.getElementById('progress-bar-fill');
+        if (fillEl) fillEl.style.width = `${percent}%`;
     }
 
     function updateUndoButtonState() {
@@ -688,13 +697,12 @@
         }
     }
 
-    // 新增：在新标签页中打开剑桥词典搜索当前单词
     function openCambridgeDict() {
         if (currentIndex >= dueList.length) return;
         const word = dueList[currentIndex];
         if (word && word.en) {
             const encodedWord = encodeURIComponent(word.en.trim());
-            const url = `https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${encodedWord}`;
+            const url = `https://dictionary.cambridge.org/dictionary/english/${encodedWord}`;
             window.open(url, '_blank');
         }
     }
@@ -771,7 +779,7 @@
         
         document.getElementById('dashboard').style.display = 'none';
         document.getElementById('flashcard-container').style.display = 'flex';
-        document.getElementById('progress').style.display = 'block';
+        document.getElementById('progress-bar-container').style.display = 'block';
 
         document.getElementById('action-buttons').style.display = swipeToggle.checked ? 'none' : 'flex';
         
@@ -949,9 +957,21 @@
 
         setTimeout(() => {
             currentIndex++;
+            clearBadgeStates();
             showCard();
             isAnimating = false;
         }, 400);
+    }
+
+    function clearBadgeStates() {
+        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
+            b.style.transition = 'none';
+            b.style.opacity = '0';
+        });
+        badgeRemember.offsetHeight;
+        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
+            b.style.transition = 'opacity 0.1s ease';
+        });
     }
 
     function processAnswerAsync(isRemembered) {
@@ -1020,6 +1040,7 @@
             console.error(`后台撤回恢复 Notion 失败 [${last.word.en}]:`, err);
         });
 
+        clearBadgeStates();
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
         currentCard.style.opacity = '0';
@@ -1098,9 +1119,6 @@
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
-        badgeRemember.style.opacity = '0';
-        badgeForgot.style.opacity = '0';
-        badgeUndo.style.opacity = '0';
 
         if (currentIndex + 1 < dueList.length) {
             const nextWord = dueList[currentIndex + 1];
