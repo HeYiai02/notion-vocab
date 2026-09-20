@@ -17,7 +17,6 @@
             --cambridge-red: #D0021B;
         }
 
-        /* 全屏视口锁死，防止产生横向滚动条 */
         html, body {
             width: 100%;
             max-width: 100vw;
@@ -37,7 +36,6 @@
             box-sizing: border-box;
         }
         
-        /* 1. 顶部左右功能栏 */
         .top-bar {
             width: 100%;
             max-width: 360px;
@@ -104,7 +102,6 @@
         .undo-btn.active { opacity: 1; pointer-events: auto; }
         .undo-btn:active { background-color: rgba(0, 122, 255, 0.1); }
 
-        /* 2. 标题正上方的身份模式状态栏 */
         .auth-bar {
             display: flex;
             align-items: center;
@@ -150,7 +147,6 @@
         }
         .start-btn:active { opacity: 0.85; }
 
-        /* 关键优化：允许自由延伸，不硬切卡片边框与阴影 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
             flex-direction: column; align-items: center;
@@ -178,7 +174,8 @@
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-style: preserve-3d;
+            /* 👈 优化翻面动画为 iOS 级高级阻尼曲线 */
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
             transform: translateZ(0); -webkit-transform: translateZ(0);
         }
@@ -269,7 +266,7 @@
     <!-- 2. 标题正上方的模式状态与解锁按钮 -->
     <div class="auth-bar">
         <span id="role-badge" class="role-badge">👤 游客模式</span>
-        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 输入密码</button>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 解锁同步</button>
     </div>
 
     <!-- 3. 主标题 -->
@@ -383,7 +380,7 @@
                 roleBadge.style.background = '#E5E5EA';
                 roleBadge.style.color = '#8E8E93';
             }
-            if (authBtn) authBtn.innerText = '🔐 输入密码';
+            if (authBtn) authBtn.innerText = '🔐 解锁同步';
         }
     }
 
@@ -577,7 +574,6 @@
     }
 
     function initSwipeEvents() {
-        // 双轨制事件绑定：同时监听 pointer 和 touch，解决部分移动端兼容问题
         currentCard.addEventListener('pointerdown', onPointerDown);
         currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
         
@@ -590,36 +586,29 @@
         document.addEventListener('touchcancel', onPointerUp);
     }
 
-    // 按下瞬间重置所有状态与类名
     function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
         
         resetDragState();
         isDragging = true;
-        
-        // 兼容 touches 数组
         startX = e.touches ? e.touches[0].clientX : e.clientX; 
         startY = e.touches ? e.touches[0].clientY : e.clientY; 
         downTarget = e.target;
 
         try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
         
-        // 强制重排 (Reflow)：确保旧的 card-animate 过渡被立刻切断，实现指尖瞬间吸附
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
         currentCard.offsetHeight; 
-        
         clearBadgeStatesInstant();
     }
 
-    // 实时无延迟更新印章 opacity
     function onPointerMove(e) {
         if (!isDragging || isAnimating) return;
         
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        
         currentX = clientX - startX; 
         currentY = clientY - startY;
 
@@ -670,7 +659,6 @@
         }
 
         downTarget = null;
-        currentCard.classList.add('card-animate');
 
         if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
             undoLastAction();
@@ -687,6 +675,8 @@
     }
 
     function resetCardPosition() {
+        // 👈 核心修复：在此处解开锁死的 transition:none，让 CSS 接管回弹动画
+        currentCard.style.transition = ''; 
         currentCard.classList.add('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
@@ -715,6 +705,8 @@
         
         if (isRemembered) { badgeRemember.style.opacity = '1'; } else { badgeForgot.style.opacity = '1'; }
 
+        // 👈 核心修复：滑动飞出时同样需要解开锁死的 transition:none
+        currentCard.style.transition = ''; 
         currentCard.classList.add('card-animate');
         currentCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
         currentCard.style.opacity = '0';
@@ -816,6 +808,7 @@
         }
 
         clearBadgeStatesInstant();
+        currentCard.style.transition = ''; // 确保撤回时也有动画
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
         currentCard.style.opacity = '0';
@@ -882,6 +875,8 @@
         updateProgress();
         updateUndoButtonState();
         
+        // 👈 兜底修复：确保新卡片展示时，过渡控制权交还给 CSS
+        currentCard.style.transition = ''; 
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
@@ -895,7 +890,6 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        // 强制重排当前和下一张卡片，切断所有残余状态
         currentCard.offsetHeight;
         nextCard.offsetHeight; 
 
