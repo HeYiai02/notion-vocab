@@ -1117,9 +1117,13 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
+        nextCard.style.transition = 'none'; // 暂时关闭动画
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
+        // 强制浏览器应用样式（Reflow）后，恢复动画平滑过渡
+        nextCard.offsetHeight; 
+        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
     }
 
 </script>
