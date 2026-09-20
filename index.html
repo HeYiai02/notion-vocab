@@ -274,7 +274,7 @@
     <!-- 2. 标题正上方的模式状态与解锁按钮 -->
     <div class="auth-bar">
         <span id="role-badge" class="role-badge">👤 游客模式</span>
-        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 解锁同步</button>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 输入密码</button>
     </div>
 
     <!-- 3. 主标题 -->
@@ -388,7 +388,7 @@
                 roleBadge.style.background = '#E5E5EA';
                 roleBadge.style.color = '#8E8E93';
             }
-            if (authBtn) authBtn.innerText = '🔐 解锁同步';
+            if (authBtn) authBtn.innerText = '🔐 输入密码';
         }
     }
 
