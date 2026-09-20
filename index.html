@@ -17,6 +17,7 @@
             --cambridge-red: #D0021B;
         }
 
+        /* 全屏视口锁死，防止产生横向滚动条 */
         html, body {
             width: 100%;
             max-width: 100vw;
@@ -36,7 +37,7 @@
             box-sizing: border-box;
         }
         
-        /* 顶部左右功能栏 */
+        /* 1. 顶部左右功能栏 */
         .top-bar {
             width: 100%;
             max-width: 360px;
@@ -103,7 +104,7 @@
         .undo-btn.active { opacity: 1; pointer-events: auto; }
         .undo-btn:active { background-color: rgba(0, 122, 255, 0.1); }
 
-        /* 标题正上方的身份模式状态栏 */
+        /* 2. 标题正上方的身份模式状态栏 */
         .auth-bar {
             display: flex;
             align-items: center;
@@ -149,16 +150,24 @@
         }
         .start-btn:active { opacity: 0.85; }
 
+        /* 👈 关键优化：允许自由延伸，不硬切卡片边框与阴影 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
-            flex-direction: column; align-items: center; overflow-x: clip;
+            flex-direction: column; align-items: center;
+            overflow: visible;
         }
 
         .card-stack { position: relative; width: 100%; height: 420px; perspective: 1200px; margin-top: 10px; touch-action: none; }
+        
+        /* 👈 关键优化：柔化阴影，添加 GPU 抗锯齿轮廓 */
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
-            border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); box-sizing: border-box;
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
+            box-sizing: border-box;
             user-select: none; touch-action: none; will-change: transform, opacity, filter;
+            border: none !important;
+            outline: 1px solid transparent; /* 消除 WebKit 3D 旋转时的 1px 锯齿边框线 */
         }
         .card-next {
             z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
@@ -249,8 +258,7 @@
     <!-- 1. 顶栏：左侧开关 + 右侧撤回按钮 -->
     <div class="top-bar">
         <div class="switch-container">
-            <!--  -->
-            <!-- <span>快捷滑动</span> -->
+            <span>快捷滑动</span>
             <label class="switch">
                 <input type="checkbox" id="swipe-toggle" checked>
                 <span class="slider"></span>
@@ -262,7 +270,7 @@
     <!-- 2. 标题正上方的模式状态与解锁按钮 -->
     <div class="auth-bar">
         <span id="role-badge" class="role-badge">👤 游客模式</span>
-        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 输入密码</button>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 解锁同步</button>
     </div>
 
     <!-- 3. 主标题 -->
@@ -377,7 +385,7 @@
                 roleBadge.style.background = '#E5E5EA';
                 roleBadge.style.color = '#8E8E93';
             }
-            if (authBtn) authBtn.innerText = '🔐 输入密码';
+            if (authBtn) authBtn.innerText = '🔐 解锁同步';
         }
     }
 
@@ -598,7 +606,8 @@
         }
 
         const rotate = currentX * 0.08;
-        const opacity = 1 - Math.abs(currentX) / 500;
+        // 👈 优化平滑淡出逻辑
+        const opacity = Math.max(0, 1 - Math.abs(currentX) / 320);
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
