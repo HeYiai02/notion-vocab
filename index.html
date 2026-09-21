@@ -364,6 +364,14 @@
     const SWIPE_DOWN_THRESHOLD = 150;
     const SWIPE_DIRECTION_RATIO = 1.15;
 
+    // 更接近 Anki / 微信读书的“距离 + 速度”手感：
+    // 慢速拖动需要更长距离，快速甩动可以用较短距离触发。
+    const SWIPE_MIN_THRESHOLD = 75;
+    const SWIPE_MAX_THRESHOLD = 160;
+    const SWIPE_FAST_VELOCITY = 0.95;      // px/ms，达到后明显降低距离要求
+    const SWIPE_SLOW_VELOCITY = 0.20;      // px/ms，低于后基本按距离判断
+    const SWIPE_DIRECTION_CONFIDENCE = 1.15;
+
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
     const badgeRemember = document.getElementById('badge-remember');
@@ -598,7 +606,13 @@
         isDragging = true;
         
         startX = e.clientX;
-        startY = e.clientY; 
+        startY = e.clientY;
+        startTime = performance.now();
+        lastMoveTime = startTime;
+        lastMoveX = startX;
+        lastMoveY = startY;
+        releaseVelocityX = 0;
+        releaseVelocityY = 0; 
         downTarget = e.target;
 
         try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
@@ -628,7 +642,13 @@
         // 下滑撤回：提示从轻到重，达到阈值时才满格。
         if (isVertical && historyStack.length > 0) {
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
-            badgeUndo.style.opacity = Math.min(currentY / SWIPE_DOWN_THRESHOLD, 1).toString();
+            const undoThreshold = SWIPE_MAX_THRESHOLD -
+                (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) *
+                Math.max(0, Math.min(
+                    (Math.max(Math.abs(releaseVelocityY), Math.abs(currentY / Math.max(performance.now() - startTime, 1))) - SWIPE_SLOW_VELOCITY) /
+                    (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+                ));
+            badgeUndo.style.opacity = Math.min(currentY / undoThreshold, 1).toString();
             badgeRemember.style.opacity = '0';
             badgeForgot.style.opacity = '0';
             return;
@@ -651,7 +671,14 @@
             badgeForgot.style.opacity = '0';
         }
 
-        const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
+        const liveVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(releaseVelocityY));
+        const liveSpeedFactor = Math.max(0, Math.min(
+            (liveVelocity - SWIPE_SLOW_VELOCITY) /
+            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+        ));
+        const liveThreshold = SWIPE_MAX_THRESHOLD -
+            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * liveSpeedFactor;
+        const progress = Math.min(Math.abs(currentX) / liveThreshold, 1);
         nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
         nextCard.style.opacity = 0.6 + 0.4 * progress;
         nextCard.style.filter = `blur(${1 - progress}px)`;
@@ -682,8 +709,37 @@
         downTarget = null;
         currentCard.classList.add('card-animate');
 
-        const isVerticalSwipe = currentY > SWIPE_DOWN_THRESHOLD && currentY > Math.abs(currentX) * SWIPE_DIRECTION_RATIO;
-        const isHorizontalSwipe = Math.abs(currentX) > SWIPE_THRESHOLD && Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_RATIO;
+        const totalTime = Math.max(performance.now() - startTime, 1);
+        const totalVX = currentX / totalTime;
+        const totalVY = currentY / totalTime;
+
+        // 用“释放瞬间速度 + 整体平均速度”判断甩动强度。
+        const horizontalVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(totalVX));
+        const verticalVelocity = Math.max(Math.abs(releaseVelocityY), Math.abs(totalVY));
+
+        // 快速甩动：阈值从 140px 平滑降低到约 75px；
+        // 慢速拖动：保持较高阈值，避免轻轻拖一下就误触发。
+        const horizontalSpeedFactor = Math.max(0, Math.min(
+            (horizontalVelocity - SWIPE_SLOW_VELOCITY) /
+            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+        ));
+        const horizontalThreshold = SWIPE_MAX_THRESHOLD -
+            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * horizontalSpeedFactor;
+
+        const verticalSpeedFactor = Math.max(0, Math.min(
+            (verticalVelocity - SWIPE_SLOW_VELOCITY) /
+            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+        ));
+        const verticalThreshold = SWIPE_MAX_THRESHOLD -
+            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * verticalSpeedFactor;
+
+        const isVerticalSwipe =
+            currentY > verticalThreshold &&
+            currentY > Math.abs(currentX) * SWIPE_DIRECTION_CONFIDENCE;
+
+        const isHorizontalSwipe =
+            Math.abs(currentX) > horizontalThreshold &&
+            Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_CONFIDENCE;
 
         if (swipeToggle.checked && isVerticalSwipe && historyStack.length > 0) {
             undoLastAction();
