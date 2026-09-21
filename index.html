@@ -17,7 +17,6 @@
             --cambridge-red: #D0021B;
         }
 
-        /* 全屏视口锁死，防止产生横向滚动条 */
         html, body {
             width: 100%;
             max-width: 100vw;
@@ -37,7 +36,6 @@
             box-sizing: border-box;
         }
         
-        /* 1. 顶部左右功能栏 */
         .top-bar {
             width: 100%;
             max-width: 360px;
@@ -50,123 +48,48 @@
             margin-top: 4px;
         }
 
-        .switch-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
+        .switch-container { display: flex; align-items: center; gap: 8px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #E5E5EA;
-            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 50%;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #E5E5EA; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px; background-color: white; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: var(--success); }
         input:checked + .slider:before { transform: translateX(20px); }
 
         .undo-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            opacity: 0;
-            pointer-events: none;
+            background: none; border: none; color: var(--primary); font-size: 14px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; transition: all 0.2s ease;
+            opacity: 0; pointer-events: none;
         }
         .undo-btn.active { opacity: 1; pointer-events: auto; }
         .undo-btn:active { background-color: rgba(0, 122, 255, 0.1); }
 
-        /* 2. 标题正上方的身份模式状态栏 */
-        .auth-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 14px;
-            margin-bottom: 2px;
-        }
-        .role-badge {
-            font-size: 12px;
-            padding: 3px 10px;
-            border-radius: 12px;
-            background: #E5E5EA;
-            color: #8E8E93;
-            font-weight: 600;
-        }
-        .auth-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 2px 6px;
-        }
+        .auth-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; margin-bottom: 2px; }
+        .role-badge { font-size: 12px; padding: 3px 10px; border-radius: 12px; background: #E5E5EA; color: #8E8E93; font-weight: 600; }
+        .auth-btn { background: none; border: none; color: var(--primary); font-size: 13px; font-weight: bold; cursor: pointer; padding: 2px 6px; }
 
-        h1 {
-            color: var(--text-main);
-            font-size: 24px;
-            margin-bottom: 10px;
-            margin-top: 6px;
-        }
+        h1 { color: var(--text-main); font-size: 24px; margin-bottom: 10px; margin-top: 6px; }
         
         #dashboard { text-align: center; width: 100%; max-width: 360px; margin-top: 20px; }
         .stats { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .stats p { margin: 5px 0; color: var(--text-sub); font-size: 15px; }
         .stats strong { color: var(--primary); font-size: 32px; }
-        .start-btn {
-            display: inline-block; width: 100%; padding: 16px; background: var(--primary);
-            color: white; border-radius: 12px; cursor: pointer; font-size: 18px;
-            font-weight: bold; margin-top: 20px; border: none;
-            box-shadow: 0 4px 12px rgba(0,122,255,0.25); transition: opacity 0.2s;
-        }
+        .start-btn { display: inline-block; width: 100%; padding: 16px; background: var(--primary); color: white; border-radius: 12px; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: 20px; border: none; box-shadow: 0 4px 12px rgba(0,122,255,0.25); transition: opacity 0.2s; }
         .start-btn:active { opacity: 0.85; }
 
-        /* 关键优化：允许自由延伸，不硬切卡片边框与阴影 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
-            flex-direction: column; align-items: center;
-            overflow: visible;
+            flex-direction: column; align-items: center; overflow: visible;
         }
 
         .card-stack { position: relative; width: 100%; height: 420px; perspective: 1200px; margin-top: 10px; touch-action: none; }
         
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
-            border-radius: 20px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
+            border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
             box-sizing: border-box;
             user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; will-change: transform, opacity, filter;
-            border: none !important;
-            outline: 1px solid transparent;
+            border: none !important; outline: 1px solid transparent;
         }
         .card-next {
             z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
@@ -178,10 +101,7 @@
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            /* 优化翻面动画为 iOS 级高级阻尼曲线 */
-            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
-            -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
-            /* 加入微小预检旋转，强制提前生成 3D 纹理缓存 */
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
             transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg); 
             -webkit-transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg);
         }
@@ -206,9 +126,8 @@
         .badge-undo { top: 20px; left: 50%; transform: translateX(-50%); color: var(--primary); border-color: var(--primary); }
 
         .word-en {
-            font-size: 34px; font-weight: bold; color: var(--text-main); text-align: center;
-            word-break: break-word; padding: 8px 20px; border-radius: 12px; cursor: pointer;
-            margin-bottom: 2px; transition: transform 0.1s, color 0.15s, background-color 0.15s;
+            font-size: 34px; font-weight: bold; color: var(--text-main); text-align: center; word-break: break-word;
+            padding: 8px 20px; border-radius: 12px; cursor: pointer; margin-bottom: 2px; transition: transform 0.1s, color 0.15s, background-color 0.15s;
         }
         .word-en:active { transform: scale(0.92); color: var(--primary); background-color: rgba(0, 122, 255, 0.08); }
 
@@ -257,7 +176,6 @@
 </head>
 <body>
 
-    <!-- 1. 顶栏：左侧开关 + 右侧撤回按钮 -->
     <div class="top-bar">
         <div class="switch-container">
             <label class="switch">
@@ -268,13 +186,11 @@
         <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">↺ 撤回上词</button>
     </div>
 
-    <!-- 2. 标题正上方的模式状态与解锁按钮 -->
     <div class="auth-bar">
         <span id="role-badge" class="role-badge">👤 游客模式</span>
         <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 解锁同步</button>
     </div>
 
-    <!-- 3. 主标题 -->
     <h1>🚀 云端单词卡</h1>
     <div id="loading">正在连接 Notion 获取数据...</div>
 
@@ -363,8 +279,17 @@
     let isDragging = false;
     let isAnimating = false;
     let downTarget = null;
-    const SWIPE_THRESHOLD = 90;
-    const SWIPE_DOWN_THRESHOLD = 100;
+    let isTouchEngine = false; // 用于 Touch 与 Pointer 双轨防重核心变量
+
+    const SWIPE_THRESHOLD = 140;
+    const SWIPE_DOWN_THRESHOLD = 150;
+    const SWIPE_DIRECTION_RATIO = 1.15;
+
+    const SWIPE_MIN_THRESHOLD = 75;
+    const SWIPE_MAX_THRESHOLD = 160;
+    const SWIPE_FAST_VELOCITY = 0.95;      
+    const SWIPE_SLOW_VELOCITY = 0.20;      
+    const SWIPE_DIRECTION_CONFIDENCE = 1.15;
 
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
@@ -439,7 +364,6 @@
 
     function getTodayDateStr() { return new Date().toISOString().split('T')[0]; }
 
-    // 【修复进度条】：当访客模式时，完全隔离不读取、不写入 LocalStorage，每次刷新必归零
     function getTodayCompletedCount() {
         if (isVisitorMode) return 0; 
         
@@ -584,45 +508,40 @@
     }
 
     function initSwipeEvents() {
-        // 双轨制事件绑定：同时支持 touch 和 pointer，并阻止原生滚动干扰
+        // 双轨制事件绑定，保证覆盖一切移动端机型
+        currentCard.addEventListener('touchstart', onDragStart, { passive: true });
         currentCard.addEventListener('pointerdown', onDragStart);
-        currentCard.addEventListener('touchstart', onDragStart, { passive: false });
         
-        document.addEventListener('pointermove', onDragMove);
         document.addEventListener('touchmove', onDragMove, { passive: false });
+        document.addEventListener('pointermove', onDragMove);
         
-        document.addEventListener('pointerup', onDragEnd);
-        document.addEventListener('pointercancel', onDragEnd);
         document.addEventListener('touchend', onDragEnd);
         document.addEventListener('touchcancel', onDragEnd);
+        document.addEventListener('pointerup', onDragEnd);
+        document.addEventListener('pointercancel', onDragEnd);
     }
 
-    // 获取坐标函数，优先级：Touch > Pointer
-    function getCoordinates(e) {
-        if (e.touches && e.touches.length > 0) {
-            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        } else if (e.changedTouches && e.changedTouches.length > 0) {
-            return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    // 自动判定引擎，一旦探测到 touch，全面接管并抛弃 pointer，防止漂移
+    function getCoordsAndCheckEngine(e) {
+        if (e.type.includes('touch')) {
+            isTouchEngine = true;
+            const touch = e.touches.length > 0 ? e.touches[0] : e.changedTouches[0];
+            return { x: touch.clientX, y: touch.clientY };
         }
         return { x: e.clientX, y: e.clientY };
     }
 
     function onDragStart(e) {
+        if (e.type.includes('pointer') && isTouchEngine) return; // Touch接管后，丢弃所有 Pointer 事件，根治坐标叠加！
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
         
-        // 如果是 touch 事件，阻止默认行为可以防止滚动导致 pointercancel
-        if (e.type === 'touchstart' && swipeToggle.checked) {
-            // 这里不调用 preventDefault，交给 CSS 的 touch-action 阻断滚动以允许点击穿透
-        }
-
         resetDragState();
         isDragging = true;
         
-        const coords = getCoordinates(e);
+        const coords = getCoordsAndCheckEngine(e);
         startX = coords.x;
         startY = coords.y;
-        
         startTime = performance.now();
         lastMoveTime = startTime;
         lastMoveX = startX;
@@ -631,20 +550,20 @@
         releaseVelocityY = 0; 
         downTarget = e.target;
 
-        if (e.type === 'pointerdown') {
-            try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
-        }
+        // 👈 【核心修复1】：彻底删除 setPointerCapture 毒瘤！这是引起 Safari 变形漂移的罪魁祸首！
+        // 因为我们监听了 document 级别事件，所以即使不捕获，滑出元素外也不会丢失跟踪。
         
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
         
-        // 魔法代码：强制浏览器重排，打断残留的 CSS 动画
+        // 强制浏览器刷新渲染管线，阻断上一帧可能遗留的 CSS 动画
         currentCard.offsetHeight; 
         
         clearBadgeStatesInstant();
     }
 
     function onDragMove(e) {
+        if (e.type.includes('pointer') && isTouchEngine) return; 
         if (!isDragging || isAnimating) return;
         
         // 阻止移动端的下拉刷新和默认滚动（只在启用了快捷滑动时）
@@ -652,7 +571,7 @@
             e.preventDefault(); 
         }
         
-        const coords = getCoordinates(e);
+        const coords = getCoordsAndCheckEngine(e);
         currentX = coords.x - startX; 
         currentY = coords.y - startY;
 
@@ -668,44 +587,57 @@
 
         if (!swipeToggle.checked) return;
         
-        if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
+        const isVertical = currentY > 0 && currentY > Math.abs(currentX) * SWIPE_DIRECTION_RATIO;
+        const isHorizontal = Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_RATIO;
+
+        if (isVertical && historyStack.length > 0) {
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
-            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
-            badgeRemember.style.opacity = '0'; 
+            const undoThreshold = SWIPE_MAX_THRESHOLD -
+                (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) *
+                Math.max(0, Math.min(
+                    (Math.max(Math.abs(releaseVelocityY), Math.abs(currentY / Math.max(performance.now() - startTime, 1))) - SWIPE_SLOW_VELOCITY) /
+                    (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+                ));
+            badgeUndo.style.opacity = Math.min(currentY / undoThreshold, 1).toString();
+            badgeRemember.style.opacity = '0';
             badgeForgot.style.opacity = '0';
             return;
         }
 
         const rotate = currentX * 0.08;
-        const opacity = Math.max(0, 1 - Math.abs(currentX) / 320);
+        const opacity = Math.max(0, 1 - Math.abs(currentX) / 420);
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
         badgeUndo.style.opacity = '0';
-        if (currentX > 20) {
-            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1).toString();
+        if (isHorizontal && currentX > 0) {
+            badgeRemember.style.opacity = Math.min(currentX / SWIPE_THRESHOLD, 1).toString();
             badgeForgot.style.opacity = '0';
-        } else if (currentX < -20) {
-            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1).toString();
+        } else if (isHorizontal && currentX < 0) {
+            badgeForgot.style.opacity = Math.min(-currentX / SWIPE_THRESHOLD, 1).toString();
             badgeRemember.style.opacity = '0';
         } else {
-            badgeRemember.style.opacity = '0'; 
+            badgeRemember.style.opacity = '0';
             badgeForgot.style.opacity = '0';
         }
 
-        const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
+        const liveVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(releaseVelocityY));
+        const liveSpeedFactor = Math.max(0, Math.min(
+            (liveVelocity - SWIPE_SLOW_VELOCITY) /
+            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+        ));
+        const liveThreshold = SWIPE_MAX_THRESHOLD -
+            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * liveSpeedFactor;
+        const progress = Math.min(Math.abs(currentX) / liveThreshold, 1);
         nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
         nextCard.style.opacity = 0.6 + 0.4 * progress;
         nextCard.style.filter = `blur(${1 - progress}px)`;
     }
 
     function onDragEnd(e) {
+        if (e.type.includes('pointer') && isTouchEngine) return;
         if (!isDragging) return;
         isDragging = false;
-        
-        if (e.type === 'pointerup' || e.type === 'pointercancel') {
-            try { if (currentCard.hasPointerCapture(e.pointerId)) currentCard.releasePointerCapture(e.pointerId); } catch(err) {}
-        }
 
         const distance = Math.hypot(currentX, currentY);
         if (distance < 8) {
@@ -713,11 +645,7 @@
             if (downTarget && downTarget.closest('.word-en')) { 
                 playVoice(); 
             } else { 
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        toggleFlip(); 
-                    });
-                });
+                toggleFlip(); 
             }
             downTarget = null;
             return;
@@ -726,19 +654,44 @@
         downTarget = null;
         currentCard.classList.add('card-animate');
 
-        // 结合滑动速度（抛掷力度）与滑动距离
-        const fastSwipeDown = currentY > 50 && releaseVelocityY > 0.5;
-        const fastSwipeRight = currentX > 50 && releaseVelocityX > 0.5;
-        const fastSwipeLeft = currentX < -50 && releaseVelocityX < -0.5;
+        const totalTime = Math.max(performance.now() - startTime, 1);
+        const totalVX = currentX / totalTime;
+        const totalVY = currentY / totalTime;
 
-        if (swipeToggle.checked && (currentY > SWIPE_DOWN_THRESHOLD || fastSwipeDown) && Math.abs(currentX) < 60 && historyStack.length > 0) {
+        // 用“释放瞬间速度 + 整体平均速度”判断甩动强度。
+        const horizontalVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(totalVX));
+        const verticalVelocity = Math.max(Math.abs(releaseVelocityY), Math.abs(totalVY));
+
+        const horizontalSpeedFactor = Math.max(0, Math.min(
+            (horizontalVelocity - SWIPE_SLOW_VELOCITY) /
+            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+        ));
+        const horizontalThreshold = SWIPE_MAX_THRESHOLD -
+            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * horizontalSpeedFactor;
+
+        const verticalSpeedFactor = Math.max(0, Math.min(
+            (verticalVelocity - SWIPE_SLOW_VELOCITY) /
+            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
+        ));
+        const verticalThreshold = SWIPE_MAX_THRESHOLD -
+            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * verticalSpeedFactor;
+
+        const isVerticalSwipe =
+            currentY > verticalThreshold &&
+            currentY > Math.abs(currentX) * SWIPE_DIRECTION_CONFIDENCE;
+
+        const isHorizontalSwipe =
+            Math.abs(currentX) > horizontalThreshold &&
+            Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_CONFIDENCE;
+
+        if (swipeToggle.checked && isVerticalSwipe && historyStack.length > 0) {
             undoLastAction();
             return;
         }
 
-        if (swipeToggle.checked && (currentX > SWIPE_THRESHOLD || fastSwipeRight)) {
+        if (swipeToggle.checked && isHorizontalSwipe && currentX > 0) {
             handleSwipe('right');
-        } else if (swipeToggle.checked && (currentX < -SWIPE_THRESHOLD || fastSwipeLeft)) {
+        } else if (swipeToggle.checked && isHorizontalSwipe && currentX < 0) {
             handleSwipe('left');
         } else {
             resetCardPosition();
@@ -896,17 +849,21 @@
         resetDragState();
         clearBadgeStatesInstant();
 
+        // 👈 【核心修复2】：更换新卡时，给内部翻转容器强制施加 50 毫秒的过渡断点，保证反转渲染内存彻底重置
         const cardInner = currentCard.querySelector('.card-inner');
         if (cardInner) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            cardInner.offsetHeight; // 强制重排
+            isFlipped = false;
+            
+            // 强制触发 GPU 重排
+            void currentCard.offsetWidth;
+            void cardInner.offsetWidth;
             
             setTimeout(() => {
                 cardInner.style.transition = '';
-            }, 30);
+            }, 50);
         }
-        isFlipped = false;
 
         if (currentIndex >= dueList.length) {
             document.getElementById('flashcard-container').style.display = 'none';
@@ -951,7 +908,7 @@
         updateProgress();
         updateUndoButtonState();
         
-        currentCard.style.transition = ''; 
+        currentCard.style.transition = 'none'; 
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
