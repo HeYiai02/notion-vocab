@@ -683,6 +683,9 @@
         activeCard.style.opacity = '0.6';
         activeCard.style.filter = 'blur(1px)';
         activeCard.classList.remove('is-flipped');
+        
+        // 👈 【核心修复】：加上这句“橡皮擦”，让退居二线的卡片伴随动画平滑消退它的印章！
+        clearBadges(activeCard, 'opacity 0.3s ease'); 
 
         bgCard.style.transition = 'none';
         bgCard.style.transform = 'translate3d(0, -400px, 0) rotate(-10deg)';
