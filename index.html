@@ -17,7 +17,7 @@
             --cambridge-red: #D0021B;
         }
 
-        /* 全屏视口锁死，防止产生横向滚动条 */
+        /* 全屏视口锁死 */
         html, body {
             width: 100%;
             max-width: 100vw;
@@ -37,139 +37,58 @@
             box-sizing: border-box;
         }
         
-        /* 1. 顶部左右功能栏 */
         .top-bar {
-            width: 100%;
-            max-width: 360px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-sub);
-            margin-top: 4px;
+            width: 100%; max-width: 360px; display: flex; align-items: center;
+            justify-content: space-between; font-size: 14px; font-weight: 500;
+            color: var(--text-sub); margin-top: 4px;
         }
 
-        .switch-container {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .switch {
-            position: relative;
-            display: inline-block;
-            width: 44px;
-            height: 24px;
-        }
+        .switch-container { display: flex; align-items: center; gap: 8px; }
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #E5E5EA;
-            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 24px;
-        }
-        .slider:before {
-            position: absolute;
-            content: "";
-            height: 20px;
-            width: 20px;
-            left: 2px;
-            bottom: 2px;
-            background-color: white;
-            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 50%;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #E5E5EA; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 24px; }
+        .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 2px; bottom: 2px; background-color: white; transition: .3s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: var(--success); }
         input:checked + .slider:before { transform: translateX(20px); }
 
         .undo-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            opacity: 0;
-            pointer-events: none;
+            background: none; border: none; color: var(--primary); font-size: 14px;
+            font-weight: 600; cursor: pointer; display: flex; align-items: center;
+            gap: 4px; padding: 4px 8px; border-radius: 8px; transition: all 0.2s ease;
+            opacity: 0; pointer-events: none;
         }
         .undo-btn.active { opacity: 1; pointer-events: auto; }
         .undo-btn:active { background-color: rgba(0, 122, 255, 0.1); }
 
-        /* 2. 标题正上方的身份模式状态栏 */
-        .auth-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 14px;
-            margin-bottom: 2px;
-        }
-        .role-badge {
-            font-size: 12px;
-            padding: 3px 10px;
-            border-radius: 12px;
-            background: #E5E5EA;
-            color: #8E8E93;
-            font-weight: 600;
-        }
-        .auth-btn {
-            background: none;
-            border: none;
-            color: var(--primary);
-            font-size: 13px;
-            font-weight: bold;
-            cursor: pointer;
-            padding: 2px 6px;
-        }
+        .auth-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; margin-bottom: 2px; }
+        .role-badge { font-size: 12px; padding: 3px 10px; border-radius: 12px; background: #E5E5EA; color: #8E8E93; font-weight: 600; }
+        .auth-btn { background: none; border: none; color: var(--primary); font-size: 13px; font-weight: bold; cursor: pointer; padding: 2px 6px; }
 
-        h1 {
-            color: var(--text-main);
-            font-size: 24px;
-            margin-bottom: 10px;
-            margin-top: 6px;
-        }
+        h1 { color: var(--text-main); font-size: 24px; margin-bottom: 10px; margin-top: 6px; }
         
         #dashboard { text-align: center; width: 100%; max-width: 360px; margin-top: 20px; }
         .stats { background: var(--card-bg); padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .stats p { margin: 5px 0; color: var(--text-sub); font-size: 15px; }
         .stats strong { color: var(--primary); font-size: 32px; }
-        .start-btn {
-            display: inline-block; width: 100%; padding: 16px; background: var(--primary);
-            color: white; border-radius: 12px; cursor: pointer; font-size: 18px;
-            font-weight: bold; margin-top: 20px; border: none;
-            box-shadow: 0 4px 12px rgba(0,122,255,0.25); transition: opacity 0.2s;
-        }
+        .start-btn { display: inline-block; width: 100%; padding: 16px; background: var(--primary); color: white; border-radius: 12px; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: 20px; border: none; box-shadow: 0 4px 12px rgba(0,122,255,0.25); transition: opacity 0.2s; }
         .start-btn:active { opacity: 0.85; }
 
+        /* 修改了容器属性，预热时能够平滑淡入 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
-            flex-direction: column; align-items: center;
-            overflow: visible;
+            flex-direction: column; align-items: center; overflow: visible;
+            transition: opacity 0.25s ease;
         }
 
         .card-stack { position: relative; width: 100%; height: 420px; perspective: 1200px; margin-top: 10px; touch-action: none; }
         
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
-            border-radius: 20px;
-            box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
-            box-sizing: border-box;
-            user-select: none; touch-action: none; will-change: transform, opacity, filter;
-            border: none !important;
-            outline: 1px solid transparent;
+            border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
+            box-sizing: border-box; user-select: none; touch-action: none;
         }
         .card-next {
             z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
-            transition: transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
             display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;
         }
         .card-current { z-index: 2; cursor: grab; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
@@ -177,61 +96,37 @@
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
-            -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
-            transform: translateZ(0); -webkit-transform: translateZ(0);
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; -webkit-transform-style: preserve-3d; border-radius: 20px;
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
+        /* 回归最标准稳定的写法，摒弃一切冗杂黑科技 */
         .card-face {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            /* 👈 绝杀黑科技：完全摒弃 backface-visibility，利用 3D Z轴物理遮挡完美解决 iOS 首帧渲染惰性 */
+            -webkit-backface-visibility: hidden !important; backface-visibility: hidden !important;
             background: var(--card-bg); border-radius: 20px; display: flex; flex-direction: column;
             justify-content: center; align-items: center; padding: 24px; box-sizing: border-box; text-align: center;
-            -webkit-transform-style: preserve-3d;
-            transform-style: preserve-3d;
         }
-        /* 前面放置在 Z=1px，转过去后自动被放置在 Z=1px 翻过来的背面物理遮挡 */
-        .card-front { transform: rotateY(0deg) translateZ(1px); -webkit-transform: rotateY(0deg) translateZ(1px); }
-        .card-back { transform: rotateY(180deg) translateZ(1px); -webkit-transform: rotateY(180deg) translateZ(1px); }
+        .card-front { transform: rotateY(0deg); -webkit-transform: rotateY(0deg); }
+        .card-back { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
         .card-animate { transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease; }
 
-        .swipe-badge {
-            position: absolute; top: 20px; padding: 6px 16px; border-radius: 8px; font-size: 18px; font-weight: bold;
-            border: 2px solid; opacity: 0; pointer-events: none; z-index: 10;
-        }
+        .swipe-badge { position: absolute; top: 20px; padding: 6px 16px; border-radius: 8px; font-size: 18px; font-weight: bold; border: 2px solid; opacity: 0; pointer-events: none; z-index: 10; }
         .badge-remember { right: 20px; color: var(--success); border-color: var(--success); transform: rotate(15deg); }
         .badge-forgot { left: 20px; color: var(--danger); border-color: var(--danger); transform: rotate(-15deg); }
         .badge-undo { top: 20px; left: 50%; transform: translateX(-50%); color: var(--primary); border-color: var(--primary); }
 
-        .word-en {
-            font-size: 34px; font-weight: bold; color: var(--text-main); text-align: center;
-            word-break: break-word; padding: 8px 20px; border-radius: 12px; cursor: pointer;
-            margin-bottom: 2px; transition: transform 0.1s, color 0.15s, background-color 0.15s;
-        }
+        .word-en { font-size: 34px; font-weight: bold; color: var(--text-main); text-align: center; word-break: break-word; padding: 8px 20px; border-radius: 12px; cursor: pointer; margin-bottom: 2px; transition: transform 0.1s, color 0.15s, background-color 0.15s; }
         .word-en:active { transform: scale(0.92); color: var(--primary); background-color: rgba(0, 122, 255, 0.08); }
-
         .word-phonetic { font-size: 18px; color: var(--primary); margin-bottom: 12px; font-family: "Lucida Sans Unicode", sans-serif; height: 24px; line-height: 24px; }
-        .word-zh {
-            font-size: 20px; color: var(--text-main); margin-bottom: 12px; line-height: 1.45; max-width: 100%;
-            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-            text-overflow: ellipsis; cursor: pointer; word-break: break-word; padding: 4px 8px; border-radius: 8px;
-        }
+        .word-zh { font-size: 20px; color: var(--text-main); margin-bottom: 12px; line-height: 1.45; max-width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; cursor: pointer; word-break: break-word; padding: 4px 8px; border-radius: 8px; }
         .word-zh:active { background-color: rgba(0,0,0,0.05); }
         .word-sub { font-size: 14px; color: var(--text-sub); line-height: 1.4; max-height: 60px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .tap-hint { position: absolute; bottom: 20px; font-size: 13px; color: #C7C7CC; line-height: 1.5; }
 
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); display: flex; justify-content: center;
-            align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-card {
-            background: var(--card-bg); width: 85%; max-width: 320px; max-height: 70vh; border-radius: 20px;
-            padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.18); display: flex; flex-direction: column;
-            box-sizing: border-box; transform: scale(0.9); transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .modal-card { background: var(--card-bg); width: 85%; max-width: 320px; max-height: 70vh; border-radius: 20px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.18); display: flex; flex-direction: column; box-sizing: border-box; transform: scale(0.9); transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .modal-overlay.active .modal-card { transform: scale(1); }
         .modal-header { font-size: 18px; font-weight: bold; color: var(--text-main); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E5E5EA; padding-bottom: 8px; }
         .modal-body { font-size: 16px; color: var(--text-main); line-height: 1.6; overflow-y: auto; max-height: 45vh; text-align: left; word-break: break-word; padding-right: 5px; white-space: pre-wrap; }
@@ -247,16 +142,12 @@
         .progress-bar-fill { height: 100%; width: 0%; background-color: var(--success); border-radius: 3px; transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
         #loading { display: none; margin-top: 50px; color: var(--primary); font-weight: bold; }
 
-        .cambridge-btn {
-            margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px;
-            background-color: var(--cambridge-blue); color: #FFFFFF; border: none; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;
-        }
+        .cambridge-btn { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; background-color: var(--cambridge-blue); color: #FFFFFF; border: none; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
         .cambridge-badge { background-color: var(--cambridge-red); color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-    <!-- 1. 顶栏：左侧开关 + 右侧撤回按钮 -->
     <div class="top-bar">
         <div class="switch-container">
             <label class="switch">
@@ -267,13 +158,11 @@
         <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">↺ 撤回上词</button>
     </div>
 
-    <!-- 2. 标题正上方的模式状态与解锁按钮 -->
     <div class="auth-bar">
         <span id="role-badge" class="role-badge">👤 游客模式</span>
-        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 解锁同步</button>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 输入密码</button>
     </div>
 
-    <!-- 3. 主标题 -->
     <h1>🚀 云端单词卡</h1>
     <div id="loading">正在连接 Notion 获取数据...</div>
 
@@ -372,18 +261,10 @@
         const roleBadge = document.getElementById('role-badge');
         const authBtn = document.getElementById('auth-btn');
         if (!isVisitorMode) {
-            if (roleBadge) {
-                roleBadge.innerText = '⚡ 同步模式';
-                roleBadge.style.background = 'rgba(52, 199, 89, 0.15)';
-                roleBadge.style.color = '#34C759';
-            }
+            if (roleBadge) { roleBadge.innerText = '⚡ 同步模式'; roleBadge.style.background = 'rgba(52, 199, 89, 0.15)'; roleBadge.style.color = '#34C759'; }
             if (authBtn) authBtn.innerText = '🔒 退出';
         } else {
-            if (roleBadge) {
-                roleBadge.innerText = '👤 游客模式';
-                roleBadge.style.background = '#E5E5EA';
-                roleBadge.style.color = '#8E8E93';
-            }
+            if (roleBadge) { roleBadge.innerText = '👤 游客模式'; roleBadge.style.background = '#E5E5EA'; roleBadge.style.color = '#8E8E93'; }
             if (authBtn) authBtn.innerText = '🔐 输入密码';
         }
     }
@@ -392,65 +273,50 @@
         if (!isVisitorMode) {
             if (confirm("确定要退出管理员模式，切换回游客模式吗？")) {
                 sessionStorage.removeItem('user_password');
-                userPassword = '';
-                isVisitorMode = true;
-                updateRoleUI();
-                location.reload();
+                userPassword = ''; isVisitorMode = true; updateRoleUI(); location.reload();
             }
             return;
         }
-
         const input = prompt("请输入管理员密码：");
         if (input === null || input.trim() === '') return;
-
         const password = input.trim();
 
         try {
             const res = await fetch('/api/verify_pass', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password: password })
             });
-
             const data = await res.json();
-
             if (res.ok && data.success) {
-                userPassword = password;
-                sessionStorage.setItem('user_password', userPassword);
-                isVisitorMode = false;
-                updateRoleUI();
-                alert("✅ 密码正确！已解锁同步模式，页面将加载您今日的艾宾浩斯复习任务。");
-                location.reload();
-            } else {
-                alert("❌ " + (data.error || "密码错误，解锁失败！"));
-            }
-        } catch (err) {
-            alert("❌ 验证失败，请检查网络或确认部署平台是否配置了 AUTH_PASSWORD 环境变量。");
-        }
+                userPassword = password; sessionStorage.setItem('user_password', userPassword);
+                isVisitorMode = false; updateRoleUI();
+                alert("✅ 密码正确！已解锁同步模式，页面将加载您今日的艾宾浩斯复习任务。"); location.reload();
+            } else { alert("❌ " + (data.error || "密码错误，解锁失败！")); }
+        } catch (err) { alert("❌ 验证失败，请检查网络或确认部署平台是否配置了 AUTH_PASSWORD 环境变量。"); }
     }
 
     window.addEventListener('DOMContentLoaded', () => { updateRoleUI(); });
 
     function getTodayDateStr() { return new Date().toISOString().split('T')[0]; }
 
+    // 【修复进度条】：当访客模式时，完全隔离不读取、不写入 LocalStorage，每次刷新必归零
     function getTodayCompletedCount() {
+        if (isVisitorMode) return 0; 
+        
         const savedDate = localStorage.getItem('review_date');
         const today = getTodayDateStr();
-        if (savedDate === today) {
-            return parseInt(localStorage.getItem('review_completed_count') || '0', 10);
-        } else {
-            localStorage.setItem('review_date', today);
-            localStorage.setItem('review_completed_count', '0');
-            return 0;
-        }
+        if (savedDate === today) { return parseInt(localStorage.getItem('review_completed_count') || '0', 10); } 
+        else { localStorage.setItem('review_date', today); localStorage.setItem('review_completed_count', '0'); return 0; }
     }
 
     function incrementTodayCompleted() {
+        if (isVisitorMode) return; 
         const count = getTodayCompletedCount() + 1;
         localStorage.setItem('review_completed_count', count.toString());
     }
 
     function decrementTodayCompleted() {
+        if (isVisitorMode) return;
         const count = Math.max(0, getTodayCompletedCount() - 1);
         localStorage.setItem('review_completed_count', count.toString());
     }
@@ -462,11 +328,8 @@
     }
 
     function updateUndoButtonState() {
-        if (historyStack.length > 0 && currentIndex < dueList.length) {
-            undoBtn.classList.add('active');
-        } else {
-            undoBtn.classList.remove('active');
-        }
+        if (historyStack.length > 0 && currentIndex < dueList.length) { undoBtn.classList.add('active'); } 
+        else { undoBtn.classList.remove('active'); }
     }
 
     function openCambridgeDict() {
@@ -495,7 +358,7 @@
             
             if (dueWordsEl && dashboardInfoEl) {
                 if (isVisitorMode) {
-                    dashboardInfoEl.innerText = "👤 游客体验卡组 (随机抽取展示)";
+                    dashboardInfoEl.innerText = "👤 游客体验卡组 (随机切片展示)";
                     dueWordsEl.innerText = `${remainingCount} 词`;
                 } else if (totalCount === 0) {
                     dashboardInfoEl.innerText = "今日任务状态";
@@ -516,10 +379,7 @@
                 document.getElementById('start-btn').innerText = "开始复习";
                 document.getElementById('start-btn').disabled = false;
             }
-
-        } catch (err) {
-            document.getElementById('loading').innerText = "获取数据失败，请检查配置。";
-        }
+        } catch (err) { document.getElementById('loading').innerText = "获取数据失败，请检查配置。"; }
     }
 
     function openModal(wordEn, wordZh) {
@@ -555,13 +415,34 @@
         }
         
         document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('flashcard-container').style.display = 'flex';
+        
+        const fcContainer = document.getElementById('flashcard-container');
+        fcContainer.style.display = 'flex';
+        // 👉 将透明度设为接近不可见，准备进行“瞒天过海”的预渲染
+        fcContainer.style.opacity = '0.01'; 
+        
         document.getElementById('progress-bar-container').style.display = 'block';
         document.getElementById('action-buttons').style.display = swipeToggle.checked ? 'none' : 'flex';
         
         initSwipeEvents();
         updateProgress();
         showCard();
+
+        // 👈 【核心方案：模拟操作预热 Safari GPU】
+        // 在填充完真实文字后，让机器快速替你翻转一次，强迫浏览器渲染背面纹理！
+        requestAnimationFrame(() => {
+            currentCard.style.transition = 'none';
+            currentCard.classList.add('is-flipped'); // 迅速翻面
+            
+            setTimeout(() => {
+                currentCard.classList.remove('is-flipped'); // 迅速翻回正面
+                
+                setTimeout(() => {
+                    // 两面都绘制完毕，此时再把卡片组平滑淡入给用户看
+                    fcContainer.style.opacity = '1';
+                }, 50);
+            }, 50);
+        });
     });
 
     function playVoice() {
@@ -575,15 +456,14 @@
     function resetDragState() {
         isDragging = false;
         startX = 0; startY = 0; currentX = 0; currentY = 0;
+        downTarget = null;
     }
 
     function initSwipeEvents() {
         currentCard.addEventListener('pointerdown', onPointerDown);
         currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
-        
         document.addEventListener('pointermove', onPointerMove);
         document.addEventListener('touchmove', onPointerMove, { passive: false });
-        
         document.addEventListener('pointerup', onPointerUp);
         document.addEventListener('touchend', onPointerUp);
         document.addEventListener('pointercancel', onPointerUp);
@@ -597,17 +477,21 @@
         resetDragState();
         isDragging = true;
         
-        // 兼容 touches 数组
         startX = e.touches ? e.touches[0].clientX : e.clientX; 
         startY = e.touches ? e.touches[0].clientY : e.clientY; 
         downTarget = e.target;
 
         try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
         
+        // 👈 【核心修复：彻底解除动画对 JS 拖拽的干扰，防止第二张阈值变短】
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
-        currentCard.offsetHeight; 
-        clearBadgeStatesInstant();
+        
+        // 操作前绝对重置印章透明度，去除阻碍响应的 css transition
+        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
+            b.style.transition = 'none';
+            b.style.opacity = '0';
+        });
     }
 
     function onPointerMove(e) {
@@ -623,7 +507,7 @@
         
         if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
-            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
+            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1).toString();
             badgeRemember.style.opacity = '0'; 
             badgeForgot.style.opacity = '0';
             return;
@@ -632,7 +516,7 @@
         const rotate = currentX * 0.08;
         const opacity = Math.max(0, 1 - Math.abs(currentX) / 320);
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
-        currentCard.style.opacity = opacity;
+        currentCard.style.opacity = opacity.toString();
 
         badgeUndo.style.opacity = '0';
         if (currentX > 20) {
@@ -648,7 +532,7 @@
 
         const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
         nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
-        nextCard.style.opacity = 0.6 + 0.4 * progress;
+        nextCard.style.opacity = (0.6 + 0.4 * progress).toString();
         nextCard.style.filter = `blur(${1 - progress}px)`;
     }
 
@@ -663,11 +547,7 @@
             if (downTarget && downTarget.closest('.word-en')) { 
                 playVoice(); 
             } else { 
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        toggleFlip(); 
-                    });
-                });
+                requestAnimationFrame(() => { requestAnimationFrame(() => { toggleFlip(); }); });
             }
             downTarget = null;
             return;
@@ -696,8 +576,12 @@
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
         
-        clearBadgeStatesWithTransition();
+        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
+            b.style.transition = 'opacity 0.2s ease';
+            b.style.opacity = '0';
+        });
 
+        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6'; 
         nextCard.style.filter = 'blur(1px)';
@@ -733,24 +617,9 @@
 
         setTimeout(() => {
             currentIndex++;
-            clearBadgeStatesInstant();
             showCard();
             isAnimating = false;
         }, 400);
-    }
-
-    function clearBadgeStatesInstant() {
-        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
-            b.style.transition = 'none';
-            b.style.opacity = '0';
-        });
-    }
-
-    function clearBadgeStatesWithTransition() {
-        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
-            b.style.transition = 'opacity 0.2s ease';
-            b.style.opacity = '0';
-        });
     }
 
     function processAnswerAsync(isRemembered) {
@@ -770,10 +639,7 @@
             dueList.push({ ...word, level: 0 });
         }
 
-        if (isVisitorMode) {
-            console.log("【游客模式】仅本地保存记录，跳过 Notion 同步");
-            return; 
-        }
+        if (isVisitorMode) return; 
 
         const daysToAdd = INTERVALS[newLevel];
         const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
@@ -789,7 +655,7 @@
                 sessionStorage.removeItem('user_password');
                 userPassword = ''; isVisitorMode = true; updateRoleUI();
             }
-        }).catch(err => { console.error(`后台写入 Notion 失败 [${word.en}]:`, err); });
+        }).catch(err => { console.error(`写入 Notion 失败:`, err); });
     }
 
     function undoLastAction() {
@@ -809,20 +675,17 @@
         if (!isVisitorMode) {
             const todayStr = getTodayDateStr();
             fetch('/api/update_word', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Auth-Password': userPassword },
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth-Password': userPassword },
                 body: JSON.stringify({ pageId: last.word.pageId, newLevel: last.word.level, nextReviewDate: todayStr })
             }).then(res => {
                 if (res.status === 403) {
-                    alert("密码错误或权限失效，已恢复游客模式！");
                     sessionStorage.removeItem('user_password');
                     userPassword = ''; isVisitorMode = true; updateRoleUI();
                 }
-            }).catch(err => { console.error(`后台撤回失败 [${last.word.en}]:`, err); });
+            }).catch(err => { console.error(`撤回失败:`, err); });
         }
 
-        clearBadgeStatesInstant();
-        currentCard.style.transition = ''; 
+        currentCard.style.transition = 'none'; 
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
         currentCard.style.opacity = '0';
@@ -838,18 +701,20 @@
 
     function showCard() {
         resetDragState();
-        clearBadgeStatesInstant();
+
+        // 彻底清理 currentCard 上残留的所有属性，防止上一轮动画影响拖拽判定
+        currentCard.style.transition = 'none';
+        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+        currentCard.style.opacity = '1';
+        currentCard.classList.remove('card-animate', 'is-flipped');
+
+        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
+            b.style.transition = 'none';
+            b.style.opacity = '0';
+        });
 
         const cardInner = currentCard.querySelector('.card-inner');
-        if (cardInner) {
-            cardInner.style.transition = 'none';
-            currentCard.classList.remove('is-flipped');
-            cardInner.offsetHeight; // 强制重排
-            
-            setTimeout(() => {
-                cardInner.style.transition = '';
-            }, 30);
-        }
+        if (cardInner) cardInner.style.transition = 'none';
         isFlipped = false;
 
         if (currentIndex >= dueList.length) {
@@ -869,7 +734,7 @@
 
         const word = dueList[currentIndex];
         
-        // 👈 【核心修复1】：彻底防御底层空数据报错，解决卡片虚化卡死问题
+        // 防崩溃防御：如果为 null，赋值空字符串
         const enText = word.en || "";
         const zhText = word.zh || "";
         const subText = word.sub || "";
@@ -888,19 +753,12 @@
 
         document.getElementById('back-sub').innerText = subText;
         
-        const frontPhonetic = document.getElementById('front-phonetic');
-        const backPhonetic = document.getElementById('back-phonetic');
         const phoneticStr = word.phonetic ? `[${word.phonetic.replace(/\//g, '')}]` : "";
-        frontPhonetic.innerText = phoneticStr;
-        backPhonetic.innerText = phoneticStr;
+        document.getElementById('front-phonetic').innerText = phoneticStr;
+        document.getElementById('back-phonetic').innerText = phoneticStr;
         
         updateProgress();
         updateUndoButtonState();
-        
-        currentCard.style.transition = ''; 
-        currentCard.classList.remove('card-animate');
-        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-        currentCard.style.opacity = '1';
 
         if (currentIndex + 1 < dueList.length) {
             const nextWord = dueList[currentIndex + 1];
@@ -911,15 +769,21 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        currentCard.offsetHeight;
-        nextCard.offsetHeight; 
-
+        // 彻底重置 nextCard 状态
         nextCard.style.transition = 'none';
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
+        
+        // 强制重排，让浏览器清醒一下
+        currentCard.offsetHeight;
         nextCard.offsetHeight; 
-        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
+
+        // 安全恢复 Transition 过渡，避开同步卡顿
+        setTimeout(() => {
+            if (cardInner) cardInner.style.transition = '';
+            nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
+        }, 30);
     }
 
 </script>
