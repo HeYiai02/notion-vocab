@@ -77,8 +77,8 @@
         
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
-            border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); box-sizing: border-box;
-            user-select: none; touch-action: none; border: none !important; outline: 1px solid transparent;
+            border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
+            box-sizing: border-box; user-select: none; touch-action: none; border: none !important; outline: 1px solid transparent;
             will-change: transform, opacity, filter;
         }
         .card-next {
@@ -86,13 +86,14 @@
             transition: transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
             display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;
         }
-        .card-current { z-index: 2; cursor: grab; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
+        .card-current { z-index: 2; cursor: grab; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; display: block; }
         .card-current:active { cursor: grabbing; }
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-style: preserve-3d; -webkit-transform-style: preserve-3d;
-            border-radius: 20px; will-change: transform; transform: translateZ(0); -webkit-transform: translateZ(0);
+            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
+            -webkit-transform-style: preserve-3d; border-radius: 20px; 
+            transform: translateZ(0); -webkit-transform: translateZ(0);
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
@@ -142,14 +143,13 @@
 
         .cambridge-btn { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; background-color: var(--cambridge-blue); color: #FFFFFF; border: none; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 37, 84, 0.2); transition: transform 0.15s ease, background-color 0.15s ease; user-select: none; }
         .cambridge-btn:active { transform: scale(0.96); background-color: #001938; }
-        .cambridge-badge { background-color: var(--cambridge-red); color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .cambridge-badge { background-color: var(--cambridge-red); color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <div class="switch-container">
-            <span>快捷滑动</span>
             <label class="switch">
                 <input type="checkbox" id="swipe-toggle" checked>
                 <span class="slider"></span>
@@ -192,7 +192,6 @@
                         <div class="word-phonetic" id="front-phonetic"></div>
                         <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | <span style="color:var(--primary);">点击单词发音</span> | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(点击空白处翻面 / 下滑撤回上一个词)</span></div>
                     </div>
-                    
                     <div class="card-face card-back">
                         <div class="word-en" id="back-en"></div>
                         <div class="word-phonetic" id="back-phonetic"></div>
@@ -242,14 +241,14 @@
     let masteredCount = 0;
     let historyStack = [];
 
-    // 干净且纯粹的状态记录，无需任何测速计算
+    // 手势记录引擎变量
     let startX = 0, startY = 0;
     let currentX = 0, currentY = 0;
     let isDragging = false;
     let isAnimating = false;
     let downTarget = null;
+    let isTouchEngine = false; // 用于彻底阻断 Touch/Pointer 双重发包冲突
     
-    // 最舒适的黄金触发阈值
     const SWIPE_THRESHOLD = 90;
     const SWIPE_DOWN_THRESHOLD = 100;
 
@@ -295,7 +294,6 @@
 
         const input = prompt("请输入管理员密码：");
         if (input === null || input.trim() === '') return;
-
         const password = input.trim();
 
         try {
@@ -306,7 +304,6 @@
             });
 
             const data = await res.json();
-
             if (res.ok && data.success) {
                 userPassword = password;
                 sessionStorage.setItem('user_password', userPassword);
@@ -328,7 +325,6 @@
 
     function getTodayCompletedCount() {
         if (isVisitorMode) return 0; 
-        
         const savedDate = localStorage.getItem('review_date');
         const today = getTodayDateStr();
         if (savedDate === today) { return parseInt(localStorage.getItem('review_completed_count') || '0', 10); } 
@@ -458,7 +454,7 @@
         if (!word || !word.en) return;
         if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
         currentAudio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
-        currentAudio.play().catch(err => console.error("音频播放失败:", err));
+        currentAudio.play().catch(err => { console.error("音频播放被拦截或失败:", err); });
     }
 
     function resetDragState() {
@@ -466,40 +462,64 @@
         startX = 0; startY = 0; currentX = 0; currentY = 0;
     }
 
-    // 回归最稳定的原生指针事件绑定，摒弃一切多余计算
     function initSwipeEvents() {
         currentCard.addEventListener('pointerdown', onPointerDown);
+        currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
+        
         document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('touchmove', onPointerMove, { passive: false });
+        
         document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('touchend', onPointerUp);
         document.addEventListener('pointercancel', onPointerUp);
+        document.addEventListener('touchcancel', onPointerUp);
+    }
+
+    // 提取统一的安全坐标，防抖拦截
+    function getCoords(e) {
+        if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        if (e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
     }
 
     function onPointerDown(e) {
+        if (e.type.includes('touch')) isTouchEngine = true;
+        if (e.type.includes('pointer') && isTouchEngine) return;
+
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
         
         resetDragState();
         isDragging = true;
         
-        // 直接使用原生绝对坐标
-        startX = e.clientX; 
-        startY = e.clientY; 
+        const coords = getCoords(e);
+        startX = coords.x; 
+        startY = coords.y; 
         downTarget = e.target;
 
-        try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
+        if (e.type.includes('pointer')) {
+            try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
+        }
         
-        // 【核心】：按下时只移除过渡，绝对不使用阻塞线程的 offsetHeight 刷新，根治前半段断崖掉帧！
+        // 关键修复：除了移除 card-animate，必须显式保证两张卡片的过渡动画被强制剥夺，实现 0ms 延迟跟手
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
+        nextCard.style.transition = 'none'; 
         
         clearBadgeStatesInstant();
     }
 
     function onPointerMove(e) {
+        if (e.type.includes('pointer') && isTouchEngine) return;
         if (!isDragging || isAnimating) return;
         
-        currentX = e.clientX - startX; 
-        currentY = e.clientY - startY;
+        if (e.type === 'touchmove' && swipeToggle.checked) {
+            e.preventDefault(); 
+        }
+        
+        const coords = getCoords(e);
+        currentX = coords.x - startX; 
+        currentY = coords.y - startY;
 
         if (!swipeToggle.checked) return;
         
@@ -535,33 +555,28 @@
     }
 
     function onPointerUp(e) {
+        if (e.type.includes('pointer') && isTouchEngine) return;
         if (!isDragging) return;
         isDragging = false;
-        try { if (currentCard.hasPointerCapture(e.pointerId)) currentCard.releasePointerCapture(e.pointerId); } catch(err) {}
+
+        if (e.type.includes('pointer')) {
+            try { if (currentCard.hasPointerCapture(e.pointerId)) currentCard.releasePointerCapture(e.pointerId); } catch(err) {}
+        }
 
         const distance = Math.hypot(currentX, currentY);
 
         if (distance < 8) {
-            // 👈 【防翻面掉帧终极拦截】：
-            // 如果是单纯的点击（不是拖拽），直接瞬间将父容器复位到原点，【绝对不添加】回弹过渡动画（card-animate）
-            // 这样浏览器 GPU 就能拿出全部资源，丝滑处理子元素的 3D 反转动画，彻底告别卡顿！
-            currentCard.style.transition = 'none'; 
-            currentCard.classList.remove('card-animate');
-            currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-            clearBadgeStatesInstant();
-
-            if (downTarget && downTarget.closest('.word-en')) { 
-                playVoice(); 
-            } else { 
-                toggleFlip(); 
+            resetCardPosition();
+            if (downTarget && downTarget.closest('.word-en')) {
+                playVoice();
+            } else {
+                toggleFlip();
             }
             downTarget = null;
             return;
         }
 
         downTarget = null;
-        
-        // 只有发生过真实位移的松手，才给予回弹过渡动画
         currentCard.classList.add('card-animate');
 
         if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
@@ -726,13 +741,29 @@
     function showCard() {
         resetDragState();
 
+        // 👈 【致命修复：用 display 原生打断 Chrome 的 Compositor GPU 缓存漂移】
+        // 当把 display 设为 none 并读取高度时，浏览器会被迫物理级销毁旧图层，彻底切断与上一张飞走卡片的动画矩阵联系！
         currentCard.style.transition = 'none';
-        currentCard.classList.remove('card-animate', 'is-flipped');
+        currentCard.classList.remove('card-animate');
+        currentCard.style.display = 'none'; 
+        void currentCard.offsetHeight; 
+        
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
+        currentCard.style.display = 'block'; 
+
+        // 👈 【优雅解药：确保即使在首帧也能注册 CSS 3D 动画】
+        const cardInner = currentCard.querySelector('.card-inner');
+        if (cardInner) {
+            cardInner.style.transition = 'none';
+            currentCard.classList.remove('is-flipped');
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    cardInner.style.transition = '';
+                });
+            });
+        }
         isFlipped = false;
-        
-        clearBadgeStatesInstant();
 
         if (currentIndex >= dueList.length) {
             document.getElementById('flashcard-container').style.display = 'none';
@@ -785,11 +816,15 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        // 重置底层备用卡片，等待一帧后再为其添加动画缓冲过渡，避免干扰手指当前拖拽层
+        // 背景卡片同步进行物理级重建
         nextCard.style.transition = 'none';
+        nextCard.style.display = 'none';
+        void nextCard.offsetHeight; 
+        
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
+        nextCard.style.display = 'flex';
         
         requestAnimationFrame(() => {
             nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
