@@ -186,6 +186,7 @@
             -webkit-transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg);
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
+        .card-inner.flip-no-transition { transition: none !important; }
 
         .card-face {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -358,8 +359,10 @@
     let isDragging = false;
     let isAnimating = false;
     let downTarget = null;
-    const SWIPE_THRESHOLD = 90;
-    const SWIPE_DOWN_THRESHOLD = 100;
+    // 手势阈值与视觉提示统一：必须明显滑动后才触发
+    const SWIPE_THRESHOLD = 140;
+    const SWIPE_DOWN_THRESHOLD = 150;
+    const SWIPE_DIRECTION_RATIO = 1.15;
 
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
@@ -579,17 +582,11 @@
     }
 
     function initSwipeEvents() {
-        // 双轨制事件绑定：同时监听 pointer 和 touch，这是手势最稳定的一版
+        // 统一使用 Pointer Events，避免 pointer + touch 双重触发导致状态异常。
         currentCard.addEventListener('pointerdown', onPointerDown);
-        currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
-        
         document.addEventListener('pointermove', onPointerMove);
-        document.addEventListener('touchmove', onPointerMove, { passive: false });
-        
         document.addEventListener('pointerup', onPointerUp);
-        document.addEventListener('touchend', onPointerUp);
         document.addEventListener('pointercancel', onPointerUp);
-        document.addEventListener('touchcancel', onPointerUp);
     }
 
     // 按下瞬间重置所有状态与类名
@@ -600,9 +597,8 @@
         resetDragState();
         isDragging = true;
         
-        // 兼容 touches 数组
-        startX = e.touches ? e.touches[0].clientX : e.clientX; 
-        startY = e.touches ? e.touches[0].clientY : e.clientY; 
+        startX = e.clientX;
+        startY = e.clientY; 
         downTarget = e.target;
 
         try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
@@ -618,36 +614,40 @@
     function onPointerMove(e) {
         if (!isDragging || isAnimating) return;
         
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const clientX = e.clientX;
+        const clientY = e.clientY;
         
         currentX = clientX - startX; 
         currentY = clientY - startY;
 
         if (!swipeToggle.checked) return;
         
-        if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
+        const isVertical = currentY > 0 && currentY > Math.abs(currentX) * SWIPE_DIRECTION_RATIO;
+        const isHorizontal = Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_RATIO;
+
+        // 下滑撤回：提示从轻到重，达到阈值时才满格。
+        if (isVertical && historyStack.length > 0) {
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
-            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
-            badgeRemember.style.opacity = '0'; 
+            badgeUndo.style.opacity = Math.min(currentY / SWIPE_DOWN_THRESHOLD, 1).toString();
+            badgeRemember.style.opacity = '0';
             badgeForgot.style.opacity = '0';
             return;
         }
 
         const rotate = currentX * 0.08;
-        const opacity = Math.max(0, 1 - Math.abs(currentX) / 320);
+        const opacity = Math.max(0, 1 - Math.abs(currentX) / 420);
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
         badgeUndo.style.opacity = '0';
-        if (currentX > 20) {
-            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1).toString();
+        if (isHorizontal && currentX > 0) {
+            badgeRemember.style.opacity = Math.min(currentX / SWIPE_THRESHOLD, 1).toString();
             badgeForgot.style.opacity = '0';
-        } else if (currentX < -20) {
-            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1).toString();
+        } else if (isHorizontal && currentX < 0) {
+            badgeForgot.style.opacity = Math.min(-currentX / SWIPE_THRESHOLD, 1).toString();
             badgeRemember.style.opacity = '0';
         } else {
-            badgeRemember.style.opacity = '0'; 
+            badgeRemember.style.opacity = '0';
             badgeForgot.style.opacity = '0';
         }
 
@@ -682,14 +682,17 @@
         downTarget = null;
         currentCard.classList.add('card-animate');
 
-        if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
+        const isVerticalSwipe = currentY > SWIPE_DOWN_THRESHOLD && currentY > Math.abs(currentX) * SWIPE_DIRECTION_RATIO;
+        const isHorizontalSwipe = Math.abs(currentX) > SWIPE_THRESHOLD && Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_RATIO;
+
+        if (swipeToggle.checked && isVerticalSwipe && historyStack.length > 0) {
             undoLastAction();
             return;
         }
 
-        if (swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
+        if (swipeToggle.checked && isHorizontalSwipe && currentX > 0) {
             handleSwipe('right');
-        } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
+        } else if (swipeToggle.checked && isHorizontalSwipe && currentX < 0) {
             handleSwipe('left');
         } else {
             resetCardPosition();
@@ -848,14 +851,12 @@
 
         const cardInner = currentCard.querySelector('.card-inner');
         if (cardInner) {
-            cardInner.style.transition = 'none';
+            // 换卡时只禁用“复位动画”，强制重排后立即恢复 CSS 动画。
+            // 不再使用 setTimeout，避免首次点击落在 transition:none 窗口内。
+            cardInner.classList.add('flip-no-transition');
             currentCard.classList.remove('is-flipped');
-            cardInner.offsetHeight; // 强制重排
-            
-            // 👈 【核心修复3】：给 GPU 留出 30ms 消化重排的时间，再恢复动画
-            setTimeout(() => {
-                cardInner.style.transition = '';
-            }, 30);
+            void cardInner.offsetWidth;
+            cardInner.classList.remove('flip-no-transition');
         }
         isFlipped = false;
 
