@@ -17,6 +17,7 @@
             --cambridge-red: #D0021B;
         }
 
+        /* 锁定视口，防止卡片飞出时撑大屏幕导致页面缩小 */
         html, body {
             width: 100%;
             max-width: 100vw;
@@ -28,7 +29,7 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--bg);
             margin: 0;
-            padding: 12px 20px 20px 20px;
+            padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -37,15 +38,9 @@
         }
         
         .top-bar {
-            width: 100%;
-            max-width: 360px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-sub);
-            margin-top: 4px;
+            position: absolute; top: 20px; left: 20px; right: 20px;
+            display: flex; align-items: center; justify-content: space-between;
+            font-size: 14px; font-weight: 500; color: var(--text-sub); z-index: 100;
         }
 
         .switch-container { display: flex; align-items: center; gap: 8px; }
@@ -64,7 +59,7 @@
         .undo-btn.active { opacity: 1; pointer-events: auto; }
         .undo-btn:active { background-color: rgba(0, 122, 255, 0.1); }
 
-        .auth-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; margin-bottom: 2px; }
+        .auth-bar { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 30px; margin-bottom: 2px; }
         .role-badge { font-size: 12px; padding: 3px 10px; border-radius: 12px; background: #E5E5EA; color: #8E8E93; font-weight: 600; }
         .auth-btn { background: none; border: none; color: var(--primary); font-size: 13px; font-weight: bold; cursor: pointer; padding: 2px 6px; }
 
@@ -79,17 +74,15 @@
 
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
-            flex-direction: column; align-items: center; overflow: visible;
+            flex-direction: column; align-items: center; overflow-x: clip;
         }
 
         .card-stack { position: relative; width: 100%; height: 420px; perspective: 1200px; margin-top: 10px; touch-action: none; }
         
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
-            border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
-            box-sizing: border-box;
-            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none; will-change: transform, opacity, filter;
-            border: none !important; outline: 1px solid transparent;
+            border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.08); box-sizing: border-box;
+            user-select: none; touch-action: none; will-change: transform, opacity, filter;
         }
         .card-next {
             z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
@@ -101,9 +94,8 @@
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d; -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
-            transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg); 
-            -webkit-transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg);
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); transform-style: preserve-3d; -webkit-transform-style: preserve-3d;
+            border-radius: 20px; will-change: transform; transform: translateZ(0); -webkit-transform: translateZ(0);
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
@@ -125,65 +117,51 @@
         .badge-forgot { left: 20px; color: var(--danger); border-color: var(--danger); transform: rotate(-15deg); }
         .badge-undo { top: 20px; left: 50%; transform: translateX(-50%); color: var(--primary); border-color: var(--primary); }
 
-        .word-en {
-            font-size: 34px; font-weight: bold; color: var(--text-main); text-align: center; word-break: break-word;
-            padding: 8px 20px; border-radius: 12px; cursor: pointer; margin-bottom: 2px; transition: transform 0.1s, color 0.15s, background-color 0.15s;
-        }
+        .word-en { font-size: 34px; font-weight: bold; color: var(--text-main); text-align: center; word-break: break-word; padding: 8px 20px; border-radius: 12px; cursor: pointer; margin-bottom: 2px; transition: transform 0.1s, color 0.15s, background-color 0.15s; }
         .word-en:active { transform: scale(0.92); color: var(--primary); background-color: rgba(0, 122, 255, 0.08); }
-
-        .word-phonetic { font-size: 18px; color: var(--primary); margin-bottom: 12px; font-family: "Lucida Sans Unicode", sans-serif; height: 24px; line-height: 24px; }
-        .word-zh {
-            font-size: 20px; color: var(--text-main); margin-bottom: 12px; line-height: 1.45; max-width: 100%;
-            display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
-            text-overflow: ellipsis; cursor: pointer; word-break: break-word; padding: 4px 8px; border-radius: 8px;
-        }
+        .word-phonetic { font-size: 18px; color: var(--primary); margin-bottom: 12px; font-family: "Lucida Sans Unicode", "Arial Unicode MS", sans-serif; height: 24px; line-height: 24px; }
+        .word-zh { font-size: 20px; color: var(--text-main); margin-bottom: 12px; line-height: 1.45; max-width: 100%; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis; cursor: pointer; word-break: break-word; padding: 4px 8px; border-radius: 8px; transition: background-color 0.2s; }
         .word-zh:active { background-color: rgba(0,0,0,0.05); }
         .word-sub { font-size: 14px; color: var(--text-sub); line-height: 1.4; max-height: 60px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .tap-hint { position: absolute; bottom: 20px; font-size: 13px; color: #C7C7CC; line-height: 1.5; }
 
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); display: flex; justify-content: center;
-            align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
-        }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.25s ease; }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-card {
-            background: var(--card-bg); width: 85%; max-width: 320px; max-height: 70vh; border-radius: 20px;
-            padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.18); display: flex; flex-direction: column;
-            box-sizing: border-box; transform: scale(0.9); transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
+        .modal-card { background: var(--card-bg); width: 85%; max-width: 320px; max-height: 70vh; border-radius: 20px; padding: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.18); display: flex; flex-direction: column; box-sizing: border-box; transform: scale(0.9); transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .modal-overlay.active .modal-card { transform: scale(1); }
         .modal-header { font-size: 18px; font-weight: bold; color: var(--text-main); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #E5E5EA; padding-bottom: 8px; }
         .modal-body { font-size: 16px; color: var(--text-main); line-height: 1.6; overflow-y: auto; max-height: 45vh; text-align: left; word-break: break-word; padding-right: 5px; white-space: pre-wrap; }
-        .modal-close-btn { margin-top: 15px; width: 100%; padding: 12px 0; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .modal-close-btn { margin-top: 15px; width: 100%; padding: 12px 0; background: var(--primary); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,122,255,0.25); }
 
         #action-buttons { display: none; width: 100%; max-width: 360px; justify-content: space-between; margin-top: 12px; gap: 15px; }
-        .action-btn { flex: 1; padding: 14px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; color: white; cursor: pointer; }
+        .action-btn { flex: 1; padding: 14px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.1s, opacity 0.2s; }
         .action-btn:active { transform: scale(0.96); }
         .btn-forgot { background-color: var(--danger); }
         .btn-remember { background-color: var(--success); }
+        .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .progress-bar-container { width: 100%; max-width: 360px; height: 6px; background-color: #E5E5EA; border-radius: 3px; overflow: hidden; margin-top: 16px; display: none; }
         .progress-bar-fill { height: 100%; width: 0%; background-color: var(--success); border-radius: 3px; transition: width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1); }
         #loading { display: none; margin-top: 50px; color: var(--primary); font-weight: bold; }
 
-        .cambridge-btn {
-            margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px;
-            background-color: var(--cambridge-blue); color: #FFFFFF; border: none; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer;
-        }
-        .cambridge-badge { background-color: var(--cambridge-red); color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; }
+        .cambridge-btn { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; background-color: var(--cambridge-blue); color: #FFFFFF; border: none; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 37, 84, 0.2); transition: transform 0.15s ease, background-color 0.15s ease; user-select: none; }
+        .cambridge-btn:active { transform: scale(0.96); background-color: #001938; }
+        .cambridge-badge { background-color: var(--cambridge-red); color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
     <div class="top-bar">
         <div class="switch-container">
+            <span>快捷滑动</span>
             <label class="switch">
                 <input type="checkbox" id="swipe-toggle" checked>
                 <span class="slider"></span>
             </label>
         </div>
-        <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">↺ 撤回上词</button>
+        <button id="undo-btn" class="undo-btn" onclick="undoLastAction()">
+            ↺ 撤回上词
+        </button>
     </div>
 
     <div class="auth-bar">
@@ -220,6 +198,7 @@
                         <div class="word-phonetic" id="front-phonetic"></div>
                         <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | <span style="color:var(--primary);">点击单词发音</span> | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(点击空白处翻面 / 下滑撤回上一个词)</span></div>
                     </div>
+                    
                     <div class="card-face card-back">
                         <div class="word-en" id="back-en"></div>
                         <div class="word-phonetic" id="back-phonetic"></div>
@@ -269,27 +248,14 @@
     let masteredCount = 0;
     let historyStack = [];
 
-    // 滑动坐标与速度记录
+    // 👈 最稳定版的纯净基础数据模型
     let startX = 0, startY = 0;
     let currentX = 0, currentY = 0;
-    let lastMoveX = 0, lastMoveY = 0;
-    let startTime = 0, lastMoveTime = 0;
-    let releaseVelocityX = 0, releaseVelocityY = 0;
-
     let isDragging = false;
     let isAnimating = false;
     let downTarget = null;
-    let isTouchEngine = false; // 用于 Touch 与 Pointer 双轨防重核心变量
-
-    const SWIPE_THRESHOLD = 140;
-    const SWIPE_DOWN_THRESHOLD = 150;
-    const SWIPE_DIRECTION_RATIO = 1.15;
-
-    const SWIPE_MIN_THRESHOLD = 75;
-    const SWIPE_MAX_THRESHOLD = 160;
-    const SWIPE_FAST_VELOCITY = 0.95;      
-    const SWIPE_SLOW_VELOCITY = 0.20;      
-    const SWIPE_DIRECTION_CONFIDENCE = 1.15;
+    const SWIPE_THRESHOLD = 90;
+    const SWIPE_DOWN_THRESHOLD = 100;
 
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
@@ -333,7 +299,6 @@
 
         const input = prompt("请输入管理员密码：");
         if (input === null || input.trim() === '') return;
-
         const password = input.trim();
 
         try {
@@ -344,7 +309,6 @@
             });
 
             const data = await res.json();
-
             if (res.ok && data.success) {
                 userPassword = password;
                 sessionStorage.setItem('user_password', userPassword);
@@ -364,9 +328,9 @@
 
     function getTodayDateStr() { return new Date().toISOString().split('T')[0]; }
 
+    // 【修复进度条】：游客模式安全隔离
     function getTodayCompletedCount() {
         if (isVisitorMode) return 0; 
-        
         const savedDate = localStorage.getItem('review_date');
         const today = getTodayDateStr();
         if (savedDate === today) { return parseInt(localStorage.getItem('review_completed_count') || '0', 10); } 
@@ -442,9 +406,6 @@
             if (dueList.length === 0) {
                 document.getElementById('start-btn').innerText = isVisitorMode ? "词库为空，请检查 Notion 配置" : "任务已完成，太棒了！";
                 document.getElementById('start-btn').disabled = true;
-            } else {
-                document.getElementById('start-btn').innerText = "开始复习";
-                document.getElementById('start-btn').disabled = false;
             }
 
         } catch (err) {
@@ -499,7 +460,7 @@
         if (!word || !word.en) return;
         if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
         currentAudio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
-        currentAudio.play().catch(err => console.error("音频播放失败:", err));
+        currentAudio.play().catch(err => { console.error("音频播放被拦截或失败:", err); });
     }
 
     function resetDragState() {
@@ -507,145 +468,87 @@
         startX = 0; startY = 0; currentX = 0; currentY = 0;
     }
 
+    // 👈 最稳定版（Source 4）的原汁原味引擎：仅监听纯 Pointer Events
     function initSwipeEvents() {
-        // 双轨制事件绑定，保证覆盖一切移动端机型
-        currentCard.addEventListener('touchstart', onDragStart, { passive: true });
-        currentCard.addEventListener('pointerdown', onDragStart);
-        
-        document.addEventListener('touchmove', onDragMove, { passive: false });
-        document.addEventListener('pointermove', onDragMove);
-        
-        document.addEventListener('touchend', onDragEnd);
-        document.addEventListener('touchcancel', onDragEnd);
-        document.addEventListener('pointerup', onDragEnd);
-        document.addEventListener('pointercancel', onDragEnd);
+        currentCard.addEventListener('pointerdown', onPointerDown);
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+        document.addEventListener('pointercancel', onPointerUp);
     }
 
-    // 自动判定引擎，一旦探测到 touch，全面接管并抛弃 pointer，防止漂移
-    function getCoordsAndCheckEngine(e) {
-        if (e.type.includes('touch')) {
-            isTouchEngine = true;
-            const touch = e.touches.length > 0 ? e.touches[0] : e.changedTouches[0];
-            return { x: touch.clientX, y: touch.clientY };
-        }
-        return { x: e.clientX, y: e.clientY };
-    }
-
-    function onDragStart(e) {
-        if (e.type.includes('pointer') && isTouchEngine) return; // Touch接管后，丢弃所有 Pointer 事件，根治坐标叠加！
+    function onPointerDown(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
         
         resetDragState();
         isDragging = true;
         
-        const coords = getCoordsAndCheckEngine(e);
-        startX = coords.x;
-        startY = coords.y;
-        startTime = performance.now();
-        lastMoveTime = startTime;
-        lastMoveX = startX;
-        lastMoveY = startY;
-        releaseVelocityX = 0;
-        releaseVelocityY = 0; 
-        downTarget = e.target;
+        startX = e.clientX;
+        startY = e.clientY;
+        downTarget = e.target; // 👈 精确记录按下的元素（解决防误触点击）
 
-        // 👈 【核心修复1】：彻底删除 setPointerCapture 毒瘤！这是引起 Safari 变形漂移的罪魁祸首！
-        // 因为我们监听了 document 级别事件，所以即使不捕获，滑出元素外也不会丢失跟踪。
-        
+        try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
         currentCard.classList.remove('card-animate');
-        currentCard.style.transition = 'none';
-        
-        // 强制浏览器刷新渲染管线，阻断上一帧可能遗留的 CSS 动画
-        currentCard.offsetHeight; 
-        
-        clearBadgeStatesInstant();
     }
 
-    function onDragMove(e) {
-        if (e.type.includes('pointer') && isTouchEngine) return; 
+    function onPointerMove(e) {
         if (!isDragging || isAnimating) return;
         
-        // 阻止移动端的下拉刷新和默认滚动（只在启用了快捷滑动时）
-        if (e.type === 'touchmove' && swipeToggle.checked) {
-            e.preventDefault(); 
-        }
-        
-        const coords = getCoordsAndCheckEngine(e);
-        currentX = coords.x - startX; 
-        currentY = coords.y - startY;
-
-        // 测算即时拖动速度（px/ms），用于快速抛掷判定
-        const now = performance.now();
-        const dt = Math.max(now - lastMoveTime, 1);
-        releaseVelocityX = (coords.x - lastMoveX) / dt;
-        releaseVelocityY = (coords.y - lastMoveY) / dt;
-        
-        lastMoveX = coords.x;
-        lastMoveY = coords.y;
-        lastMoveTime = now;
+        currentX = e.clientX - startX;
+        currentY = e.clientY - startY;
 
         if (!swipeToggle.checked) return;
         
-        const isVertical = currentY > 0 && currentY > Math.abs(currentX) * SWIPE_DIRECTION_RATIO;
-        const isHorizontal = Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_RATIO;
-
-        if (isVertical && historyStack.length > 0) {
+        if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
-            const undoThreshold = SWIPE_MAX_THRESHOLD -
-                (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) *
-                Math.max(0, Math.min(
-                    (Math.max(Math.abs(releaseVelocityY), Math.abs(currentY / Math.max(performance.now() - startTime, 1))) - SWIPE_SLOW_VELOCITY) /
-                    (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-                ));
-            badgeUndo.style.opacity = Math.min(currentY / undoThreshold, 1).toString();
-            badgeRemember.style.opacity = '0';
-            badgeForgot.style.opacity = '0';
+            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
+            badgeRemember.style.opacity = 0;
+            badgeForgot.style.opacity = 0;
             return;
         }
 
         const rotate = currentX * 0.08;
-        const opacity = Math.max(0, 1 - Math.abs(currentX) / 420);
+        const opacity = 1 - Math.abs(currentX) / 500;
+        
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
-        badgeUndo.style.opacity = '0';
-        if (isHorizontal && currentX > 0) {
-            badgeRemember.style.opacity = Math.min(currentX / SWIPE_THRESHOLD, 1).toString();
-            badgeForgot.style.opacity = '0';
-        } else if (isHorizontal && currentX < 0) {
-            badgeForgot.style.opacity = Math.min(-currentX / SWIPE_THRESHOLD, 1).toString();
-            badgeRemember.style.opacity = '0';
+        badgeUndo.style.opacity = 0;
+        if (currentX > 20) {
+            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1);
+            badgeForgot.style.opacity = 0;
+        } else if (currentX < -20) {
+            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1);
+            badgeRemember.style.opacity = 0;
         } else {
-            badgeRemember.style.opacity = '0';
-            badgeForgot.style.opacity = '0';
+            badgeRemember.style.opacity = 0;
+            badgeForgot.style.opacity = 0;
         }
 
-        const liveVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(releaseVelocityY));
-        const liveSpeedFactor = Math.max(0, Math.min(
-            (liveVelocity - SWIPE_SLOW_VELOCITY) /
-            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-        ));
-        const liveThreshold = SWIPE_MAX_THRESHOLD -
-            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * liveSpeedFactor;
-        const progress = Math.min(Math.abs(currentX) / liveThreshold, 1);
+        const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
         nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
         nextCard.style.opacity = 0.6 + 0.4 * progress;
         nextCard.style.filter = `blur(${1 - progress}px)`;
     }
 
-    function onDragEnd(e) {
-        if (e.type.includes('pointer') && isTouchEngine) return;
+    function onPointerUp(e) {
         if (!isDragging) return;
         isDragging = false;
 
+        try {
+            if (currentCard.hasPointerCapture(e.pointerId)) {
+                currentCard.releasePointerCapture(e.pointerId);
+            }
+        } catch(err) {}
+
         const distance = Math.hypot(currentX, currentY);
+
         if (distance < 8) {
             resetCardPosition();
-            if (downTarget && downTarget.closest('.word-en')) { 
-                playVoice(); 
-            } else { 
-                toggleFlip(); 
+            if (downTarget && downTarget.closest('.word-en')) {
+                playVoice();
+            } else {
+                toggleFlip();
             }
             downTarget = null;
             return;
@@ -654,44 +557,15 @@
         downTarget = null;
         currentCard.classList.add('card-animate');
 
-        const totalTime = Math.max(performance.now() - startTime, 1);
-        const totalVX = currentX / totalTime;
-        const totalVY = currentY / totalTime;
-
-        // 用“释放瞬间速度 + 整体平均速度”判断甩动强度。
-        const horizontalVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(totalVX));
-        const verticalVelocity = Math.max(Math.abs(releaseVelocityY), Math.abs(totalVY));
-
-        const horizontalSpeedFactor = Math.max(0, Math.min(
-            (horizontalVelocity - SWIPE_SLOW_VELOCITY) /
-            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-        ));
-        const horizontalThreshold = SWIPE_MAX_THRESHOLD -
-            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * horizontalSpeedFactor;
-
-        const verticalSpeedFactor = Math.max(0, Math.min(
-            (verticalVelocity - SWIPE_SLOW_VELOCITY) /
-            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-        ));
-        const verticalThreshold = SWIPE_MAX_THRESHOLD -
-            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * verticalSpeedFactor;
-
-        const isVerticalSwipe =
-            currentY > verticalThreshold &&
-            currentY > Math.abs(currentX) * SWIPE_DIRECTION_CONFIDENCE;
-
-        const isHorizontalSwipe =
-            Math.abs(currentX) > horizontalThreshold &&
-            Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_CONFIDENCE;
-
-        if (swipeToggle.checked && isVerticalSwipe && historyStack.length > 0) {
+        // 最稳定版的固定阈值触发
+        if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
             undoLastAction();
             return;
         }
 
-        if (swipeToggle.checked && isHorizontalSwipe && currentX > 0) {
+        if (swipeToggle.checked && currentX > SWIPE_THRESHOLD) {
             handleSwipe('right');
-        } else if (swipeToggle.checked && isHorizontalSwipe && currentX < 0) {
+        } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
             handleSwipe('left');
         } else {
             resetCardPosition();
@@ -699,22 +573,25 @@
     }
 
     function resetCardPosition() {
-        currentCard.style.transition = ''; 
         currentCard.classList.add('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
-        
-        clearBadgeStatesWithTransition();
+        badgeRemember.style.opacity = '0';
+        badgeForgot.style.opacity = '0';
+        badgeUndo.style.opacity = '0';
 
-        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
-        nextCard.style.opacity = '0.6'; 
+        nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
     }
 
     function toggleFlip() {
         isFlipped = !isFlipped;
-        if (isFlipped) { currentCard.classList.add('is-flipped'); } else { currentCard.classList.remove('is-flipped'); }
+        if (isFlipped) {
+            currentCard.classList.add('is-flipped');
+        } else {
+            currentCard.classList.remove('is-flipped');
+        }
     }
 
     function triggerSwipe(direction) {
@@ -727,38 +604,38 @@
         const isRemembered = direction === 'right';
         const flyX = isRemembered ? 500 : -500;
         
-        if (isRemembered) { badgeRemember.style.opacity = '1'; } else { badgeForgot.style.opacity = '1'; }
+        if (isRemembered) {
+            badgeRemember.style.opacity = '1';
+        } else {
+            badgeForgot.style.opacity = '1';
+        }
 
-        currentCard.style.transition = ''; 
         currentCard.classList.add('card-animate');
         currentCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
         currentCard.style.opacity = '0';
 
         nextCard.style.transform = 'scale(1) translateY(0px)';
-        nextCard.style.opacity = '1'; 
+        nextCard.style.opacity = '1';
         nextCard.style.filter = 'blur(0px)';
 
         processAnswerAsync(isRemembered);
 
         setTimeout(() => {
             currentIndex++;
-            clearBadgeStatesInstant();
+            clearBadgeStates();
             showCard();
             isAnimating = false;
         }, 400);
     }
 
-    function clearBadgeStatesInstant() {
+    function clearBadgeStates() {
         [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
             b.style.transition = 'none';
             b.style.opacity = '0';
         });
-    }
-
-    function clearBadgeStatesWithTransition() {
+        badgeRemember.offsetHeight;
         [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
-            b.style.transition = 'opacity 0.2s ease';
-            b.style.opacity = '0';
+            b.style.transition = 'opacity 0.1s ease';
         });
     }
 
@@ -766,7 +643,11 @@
         const word = dueList[currentIndex];
         if (!word) return;
 
-        historyStack.push({ word: { ...word }, index: currentIndex, isRemembered: isRemembered });
+        historyStack.push({
+            word: { ...word },
+            index: currentIndex,
+            isRemembered: isRemembered
+        });
 
         let newLevel;
         if (isRemembered) {
@@ -779,10 +660,7 @@
             dueList.push({ ...word, level: 0 });
         }
 
-        if (isVisitorMode) {
-            console.log("【游客模式】仅本地保存记录，跳过 Notion 同步");
-            return; 
-        }
+        if (isVisitorMode) { return; }
 
         const daysToAdd = INTERVALS[newLevel];
         const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
@@ -791,10 +669,14 @@
         fetch('/api/update_word', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Auth-Password': userPassword },
-            body: JSON.stringify({ pageId: word.pageId, newLevel: newLevel, nextReviewDate: nextReviewDate })
+            body: JSON.stringify({
+                pageId: word.pageId,
+                newLevel: newLevel,
+                nextReviewDate: nextReviewDate
+            })
         }).then(res => {
             if (res.status === 403) {
-                alert("密码错误或权限失效，已自动恢复为游客模式！");
+                alert("密码错误或权限失效，已恢复游客模式！");
                 sessionStorage.removeItem('user_password');
                 userPassword = ''; isVisitorMode = true; updateRoleUI();
             }
@@ -803,6 +685,7 @@
 
     function undoLastAction() {
         if (historyStack.length === 0 || isAnimating) return;
+        
         isAnimating = true;
         const last = historyStack.pop();
 
@@ -820,18 +703,20 @@
             fetch('/api/update_word', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-Auth-Password': userPassword },
-                body: JSON.stringify({ pageId: last.word.pageId, newLevel: last.word.level, nextReviewDate: todayStr })
+                body: JSON.stringify({
+                    pageId: last.word.pageId,
+                    newLevel: last.word.level,
+                    nextReviewDate: todayStr
+                })
             }).then(res => {
                 if (res.status === 403) {
-                    alert("密码错误或权限失效，已恢复游客模式！");
                     sessionStorage.removeItem('user_password');
                     userPassword = ''; isVisitorMode = true; updateRoleUI();
                 }
-            }).catch(err => { console.error(`后台撤回失败 [${last.word.en}]:`, err); });
+            }).catch(err => { console.error(`后台撤回恢复 Notion 失败 [${last.word.en}]:`, err); });
         }
 
-        clearBadgeStatesInstant();
-        currentCard.style.transition = ''; // 确保撤回时也有动画
+        clearBadgeStates();
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
         currentCard.style.opacity = '0';
@@ -845,25 +730,18 @@
         }, 50);
     }
 
+    // 👈 最稳定版（Source 4）的原汁原味渲染重排引擎，加入空数据保护
     function showCard() {
         resetDragState();
-        clearBadgeStatesInstant();
 
-        // 👈 【核心修复2】：更换新卡时，给内部翻转容器强制施加 50 毫秒的过渡断点，保证反转渲染内存彻底重置
         const cardInner = currentCard.querySelector('.card-inner');
         if (cardInner) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            isFlipped = false;
-            
-            // 强制触发 GPU 重排
-            void currentCard.offsetWidth;
-            void cardInner.offsetWidth;
-            
-            setTimeout(() => {
-                cardInner.style.transition = '';
-            }, 50);
+            cardInner.offsetHeight;
+            cardInner.style.transition = '';
         }
+        isFlipped = false;
 
         if (currentIndex >= dueList.length) {
             document.getElementById('flashcard-container').style.display = 'none';
@@ -882,7 +760,6 @@
 
         const word = dueList[currentIndex];
         
-        // 防崩溃防御：如果为 null，赋值空字符串
         const enText = word.en || "";
         const zhText = word.zh || "";
         const subText = word.sub || "";
@@ -908,7 +785,6 @@
         updateProgress();
         updateUndoButtonState();
         
-        currentCard.style.transition = 'none'; 
         currentCard.classList.remove('card-animate');
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
@@ -922,13 +798,12 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        currentCard.offsetHeight;
-        nextCard.offsetHeight; 
-
-        nextCard.style.transition = 'none';
+        nextCard.style.transition = 'none'; // 暂时关闭动画
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
+        
+        // 强制浏览器应用样式（Reflow）后，恢复动画平滑过渡
         nextCard.offsetHeight; 
         nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
     }
