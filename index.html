@@ -79,14 +79,13 @@
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
             border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
             box-sizing: border-box; user-select: none; touch-action: none; border: none !important; outline: 1px solid transparent;
-            will-change: transform, opacity, filter;
+            will-change: transform, opacity, filter; /* 👈 GPU加速常驻，绝不销毁 */
         }
         .card-next {
             z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
-            transition: transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease;
             display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;
         }
-        .card-current { z-index: 2; cursor: grab; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; display: block; }
+        .card-current { z-index: 2; cursor: grab; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
         .card-current:active { cursor: grabbing; }
 
         .card-inner {
@@ -94,6 +93,7 @@
             transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d; border-radius: 20px; 
             transform: translateZ(0); -webkit-transform: translateZ(0);
+            will-change: transform; /* 👈 预热3D翻转管线，解决第一张掉帧 */
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
@@ -105,7 +105,6 @@
         }
         .card-front { transform: rotateY(0deg) translateZ(1px); -webkit-transform: rotateY(0deg) translateZ(1px); }
         .card-back { transform: rotateY(180deg) translateZ(1px); -webkit-transform: rotateY(180deg) translateZ(1px); }
-        .card-animate { transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease; }
 
         .swipe-badge {
             position: absolute; top: 20px; padding: 6px 16px; border-radius: 8px; font-size: 18px; font-weight: bold;
@@ -143,7 +142,7 @@
 
         .cambridge-btn { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 18px; background-color: var(--cambridge-blue); color: #FFFFFF; border: none; border-radius: 20px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 37, 84, 0.2); transition: transform 0.15s ease, background-color 0.15s ease; user-select: none; }
         .cambridge-btn:active { transform: scale(0.96); background-color: #001938; }
-        .cambridge-badge { background-color: var(--cambridge-red); color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; text-transform: uppercase; }
+        .cambridge-badge { background-color: var(--cambridge-red); color: #FFFFFF; font-size: 10px; font-weight: 800; padding: 2px 5px; border-radius: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
     </style>
 </head>
 <body>
@@ -475,7 +474,6 @@
         document.addEventListener('touchcancel', onPointerUp);
     }
 
-    // 提取统一的安全坐标，防抖拦截
     function getCoords(e) {
         if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
         if (e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
@@ -501,8 +499,7 @@
             try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
         }
         
-        // 关键修复：除了移除 card-animate，必须显式保证两张卡片的过渡动画被强制剥夺，实现 0ms 延迟跟手
-        currentCard.classList.remove('card-animate');
+        // 👈 【彻底切断前置干扰】：手指接触屏幕瞬间，强制剥夺所有过渡动画，实现0延迟跟手！
         currentCard.style.transition = 'none';
         nextCard.style.transition = 'none'; 
         
@@ -566,7 +563,11 @@
         const distance = Math.hypot(currentX, currentY);
 
         if (distance < 8) {
-            resetCardPosition();
+            // 👈 【翻面极简拦截】：点击时，仅快速重置外层容器的位移，绝不干涉内层 3D 反转
+            currentCard.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+            currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+            clearBadgeStatesInstant();
+            
             if (downTarget && downTarget.closest('.word-en')) {
                 playVoice();
             } else {
@@ -577,7 +578,6 @@
         }
 
         downTarget = null;
-        currentCard.classList.add('card-animate');
 
         if (swipeToggle.checked && currentY > SWIPE_DOWN_THRESHOLD && Math.abs(currentX) < 60 && historyStack.length > 0) {
             undoLastAction();
@@ -594,8 +594,8 @@
     }
 
     function resetCardPosition() {
-        currentCard.style.transition = ''; 
-        currentCard.classList.add('card-animate');
+        // 松手复位动画由 JS 按需注入
+        currentCard.style.transition = 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease';
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
         
@@ -624,8 +624,8 @@
         
         if (isRemembered) { badgeRemember.style.opacity = '1'; } else { badgeForgot.style.opacity = '1'; }
 
-        currentCard.style.transition = ''; 
-        currentCard.classList.add('card-animate');
+        // 卡片飞走及底部卡片浮现过渡注入
+        currentCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
         currentCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
         currentCard.style.opacity = '0';
 
@@ -724,46 +724,46 @@
         }
 
         clearBadgeStatesInstant();
-        currentCard.style.transition = ''; 
-        currentCard.classList.remove('card-animate');
-        currentCard.style.transform = 'translate3d(0, -400px, 0) scale(0.9)';
-        currentCard.style.opacity = '0';
+        
+        showCard(); // 这会自动把 currentCard 置于 0,0 坐标
 
+        // 利用 JS 强行覆盖上方 showCard 的复位，设置一个由天而降的初始坐标
+        currentCard.style.transition = 'none'; 
+        currentCard.style.transform = 'translate3d(0, -400px, 0) rotate(-10deg)';
+        currentCard.style.opacity = '0';
+        void currentCard.offsetWidth; // 强制浏览器提交这个初始坐标到渲染层
+
+        // 执行空降进入动画
+        currentCard.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease';
+        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+        currentCard.style.opacity = '1';
+        
         setTimeout(() => {
-            showCard();
-            currentCard.classList.add('card-animate');
-            currentCard.style.transform = 'translate3d(0, 0, 0) scale(1)';
-            currentCard.style.opacity = '1';
             isAnimating = false;
-        }, 50);
+        }, 500);
     }
 
     function showCard() {
         resetDragState();
 
-        // 👈 【致命修复：用 display 原生打断 Chrome 的 Compositor GPU 缓存漂移】
-        // 当把 display 设为 none 并读取高度时，浏览器会被迫物理级销毁旧图层，彻底切断与上一张飞走卡片的动画矩阵联系！
-        currentCard.style.transition = 'none';
-        currentCard.classList.remove('card-animate');
-        currentCard.style.display = 'none'; 
-        void currentCard.offsetHeight; 
-        
-        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-        currentCard.style.opacity = '1';
-        currentCard.style.display = 'block'; 
-
-        // 👈 【优雅解药：确保即使在首帧也能注册 CSS 3D 动画】
+        // 👈 【无损翻转复位术】：为了不让用户看到翻回去的动画，这里瞬间消除 3D 面板的过渡属性后再复位
         const cardInner = currentCard.querySelector('.card-inner');
-        if (cardInner) {
+        if (cardInner && isFlipped) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => {
-                    cardInner.style.transition = '';
-                });
-            });
+            void cardInner.offsetWidth; // 强制刷新
+            cardInner.style.transition = ''; // 闪电恢复，保证下一次点击翻面丝滑如初
+        } else {
+            currentCard.classList.remove('is-flipped');
         }
         isFlipped = false;
+        
+        // 【最纯粹的空间复位】：彻底杜绝上一个版本的 display 销毁导致手机掉帧
+        currentCard.style.transition = 'none';
+        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+        currentCard.style.opacity = '1';
+        
+        clearBadgeStatesInstant();
 
         if (currentIndex >= dueList.length) {
             document.getElementById('flashcard-container').style.display = 'none';
@@ -816,19 +816,14 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        // 背景卡片同步进行物理级重建
+        // 👈 【防打架终极隔离】：在展示期间绝不给底层卡片赋予 transition，确保下一张直接跟手
         nextCard.style.transition = 'none';
-        nextCard.style.display = 'none';
-        void nextCard.offsetHeight; 
-        
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
-        nextCard.style.display = 'flex';
         
-        requestAnimationFrame(() => {
-            nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
-        });
+        // 渲染收尾
+        void currentCard.offsetWidth; 
     }
 
 </script>
