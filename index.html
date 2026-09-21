@@ -181,12 +181,11 @@
             /* 优化翻面动画为 iOS 级高级阻尼曲线 */
             transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
-            /* 👈 【核心修复1】：加入微小预检旋转，强制提前生成 3D 纹理缓存，解决首帧卡顿 */
+            /* 加入微小预检旋转，强制提前生成 3D 纹理缓存 */
             transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg); 
             -webkit-transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg);
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
-        .card-inner.flip-no-transition { transition: none !important; }
 
         .card-face {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -354,23 +353,18 @@
     let masteredCount = 0;
     let historyStack = [];
 
+    // 滑动坐标与速度记录
     let startX = 0, startY = 0;
     let currentX = 0, currentY = 0;
+    let lastMoveX = 0, lastMoveY = 0;
+    let startTime = 0, lastMoveTime = 0;
+    let releaseVelocityX = 0, releaseVelocityY = 0;
+
     let isDragging = false;
     let isAnimating = false;
     let downTarget = null;
-    // 手势阈值与视觉提示统一：必须明显滑动后才触发
-    const SWIPE_THRESHOLD = 140;
-    const SWIPE_DOWN_THRESHOLD = 150;
-    const SWIPE_DIRECTION_RATIO = 1.15;
-
-    // 更接近 Anki / 微信读书的“距离 + 速度”手感：
-    // 慢速拖动需要更长距离，快速甩动可以用较短距离触发。
-    const SWIPE_MIN_THRESHOLD = 75;
-    const SWIPE_MAX_THRESHOLD = 160;
-    const SWIPE_FAST_VELOCITY = 0.95;      // px/ms，达到后明显降低距离要求
-    const SWIPE_SLOW_VELOCITY = 0.20;      // px/ms，低于后基本按距离判断
-    const SWIPE_DIRECTION_CONFIDENCE = 1.15;
+    const SWIPE_THRESHOLD = 90;
+    const SWIPE_DOWN_THRESHOLD = 100;
 
     const currentCard = document.getElementById('current-card');
     const nextCard = document.getElementById('next-card');
@@ -590,23 +584,45 @@
     }
 
     function initSwipeEvents() {
-        // 统一使用 Pointer Events，避免 pointer + touch 双重触发导致状态异常。
-        currentCard.addEventListener('pointerdown', onPointerDown);
-        document.addEventListener('pointermove', onPointerMove);
-        document.addEventListener('pointerup', onPointerUp);
-        document.addEventListener('pointercancel', onPointerUp);
+        // 双轨制事件绑定：同时支持 touch 和 pointer，并阻止原生滚动干扰
+        currentCard.addEventListener('pointerdown', onDragStart);
+        currentCard.addEventListener('touchstart', onDragStart, { passive: false });
+        
+        document.addEventListener('pointermove', onDragMove);
+        document.addEventListener('touchmove', onDragMove, { passive: false });
+        
+        document.addEventListener('pointerup', onDragEnd);
+        document.addEventListener('pointercancel', onDragEnd);
+        document.addEventListener('touchend', onDragEnd);
+        document.addEventListener('touchcancel', onDragEnd);
     }
 
-    // 按下瞬间重置所有状态与类名
-    function onPointerDown(e) {
+    // 获取坐标函数，优先级：Touch > Pointer
+    function getCoordinates(e) {
+        if (e.touches && e.touches.length > 0) {
+            return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+            return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+        }
+        return { x: e.clientX, y: e.clientY };
+    }
+
+    function onDragStart(e) {
         if (currentIndex >= dueList.length || isAnimating) return;
         if (e.target.closest('#back-zh')) return;
         
+        // 如果是 touch 事件，阻止默认行为可以防止滚动导致 pointercancel
+        if (e.type === 'touchstart' && swipeToggle.checked) {
+            // 这里不调用 preventDefault，交给 CSS 的 touch-action 阻断滚动以允许点击穿透
+        }
+
         resetDragState();
         isDragging = true;
         
-        startX = e.clientX;
-        startY = e.clientY;
+        const coords = getCoordinates(e);
+        startX = coords.x;
+        startY = coords.y;
+        
         startTime = performance.now();
         lastMoveTime = startTime;
         lastMoveX = startX;
@@ -615,79 +631,81 @@
         releaseVelocityY = 0; 
         downTarget = e.target;
 
-        try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
+        if (e.type === 'pointerdown') {
+            try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
+        }
         
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
+        
+        // 魔法代码：强制浏览器重排，打断残留的 CSS 动画
         currentCard.offsetHeight; 
         
         clearBadgeStatesInstant();
     }
 
-    // 实时无延迟更新印章 opacity
-    function onPointerMove(e) {
+    function onDragMove(e) {
         if (!isDragging || isAnimating) return;
         
-        const clientX = e.clientX;
-        const clientY = e.clientY;
+        // 阻止移动端的下拉刷新和默认滚动（只在启用了快捷滑动时）
+        if (e.type === 'touchmove' && swipeToggle.checked) {
+            e.preventDefault(); 
+        }
         
-        currentX = clientX - startX; 
-        currentY = clientY - startY;
+        const coords = getCoordinates(e);
+        currentX = coords.x - startX; 
+        currentY = coords.y - startY;
+
+        // 测算即时拖动速度（px/ms），用于快速抛掷判定
+        const now = performance.now();
+        const dt = Math.max(now - lastMoveTime, 1);
+        releaseVelocityX = (coords.x - lastMoveX) / dt;
+        releaseVelocityY = (coords.y - lastMoveY) / dt;
+        
+        lastMoveX = coords.x;
+        lastMoveY = coords.y;
+        lastMoveTime = now;
 
         if (!swipeToggle.checked) return;
         
-        const isVertical = currentY > 0 && currentY > Math.abs(currentX) * SWIPE_DIRECTION_RATIO;
-        const isHorizontal = Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_RATIO;
-
-        // 下滑撤回：提示从轻到重，达到阈值时才满格。
-        if (isVertical && historyStack.length > 0) {
+        if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
             currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
-            const undoThreshold = SWIPE_MAX_THRESHOLD -
-                (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) *
-                Math.max(0, Math.min(
-                    (Math.max(Math.abs(releaseVelocityY), Math.abs(currentY / Math.max(performance.now() - startTime, 1))) - SWIPE_SLOW_VELOCITY) /
-                    (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-                ));
-            badgeUndo.style.opacity = Math.min(currentY / undoThreshold, 1).toString();
-            badgeRemember.style.opacity = '0';
+            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1);
+            badgeRemember.style.opacity = '0'; 
             badgeForgot.style.opacity = '0';
             return;
         }
 
         const rotate = currentX * 0.08;
-        const opacity = Math.max(0, 1 - Math.abs(currentX) / 420);
+        const opacity = Math.max(0, 1 - Math.abs(currentX) / 320);
         currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
         currentCard.style.opacity = opacity;
 
         badgeUndo.style.opacity = '0';
-        if (isHorizontal && currentX > 0) {
-            badgeRemember.style.opacity = Math.min(currentX / SWIPE_THRESHOLD, 1).toString();
+        if (currentX > 20) {
+            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1).toString();
             badgeForgot.style.opacity = '0';
-        } else if (isHorizontal && currentX < 0) {
-            badgeForgot.style.opacity = Math.min(-currentX / SWIPE_THRESHOLD, 1).toString();
+        } else if (currentX < -20) {
+            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1).toString();
             badgeRemember.style.opacity = '0';
         } else {
-            badgeRemember.style.opacity = '0';
+            badgeRemember.style.opacity = '0'; 
             badgeForgot.style.opacity = '0';
         }
 
-        const liveVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(releaseVelocityY));
-        const liveSpeedFactor = Math.max(0, Math.min(
-            (liveVelocity - SWIPE_SLOW_VELOCITY) /
-            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-        ));
-        const liveThreshold = SWIPE_MAX_THRESHOLD -
-            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * liveSpeedFactor;
-        const progress = Math.min(Math.abs(currentX) / liveThreshold, 1);
+        const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
         nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
         nextCard.style.opacity = 0.6 + 0.4 * progress;
         nextCard.style.filter = `blur(${1 - progress}px)`;
     }
 
-    function onPointerUp(e) {
+    function onDragEnd(e) {
         if (!isDragging) return;
         isDragging = false;
-        try { if (currentCard.hasPointerCapture(e.pointerId)) currentCard.releasePointerCapture(e.pointerId); } catch(err) {}
+        
+        if (e.type === 'pointerup' || e.type === 'pointercancel') {
+            try { if (currentCard.hasPointerCapture(e.pointerId)) currentCard.releasePointerCapture(e.pointerId); } catch(err) {}
+        }
 
         const distance = Math.hypot(currentX, currentY);
         if (distance < 8) {
@@ -695,7 +713,6 @@
             if (downTarget && downTarget.closest('.word-en')) { 
                 playVoice(); 
             } else { 
-                // 👈 【延迟两帧触发翻转，避开父级节点复位引发的重绘冲突】
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         toggleFlip(); 
@@ -709,46 +726,19 @@
         downTarget = null;
         currentCard.classList.add('card-animate');
 
-        const totalTime = Math.max(performance.now() - startTime, 1);
-        const totalVX = currentX / totalTime;
-        const totalVY = currentY / totalTime;
+        // 结合滑动速度（抛掷力度）与滑动距离
+        const fastSwipeDown = currentY > 50 && releaseVelocityY > 0.5;
+        const fastSwipeRight = currentX > 50 && releaseVelocityX > 0.5;
+        const fastSwipeLeft = currentX < -50 && releaseVelocityX < -0.5;
 
-        // 用“释放瞬间速度 + 整体平均速度”判断甩动强度。
-        const horizontalVelocity = Math.max(Math.abs(releaseVelocityX), Math.abs(totalVX));
-        const verticalVelocity = Math.max(Math.abs(releaseVelocityY), Math.abs(totalVY));
-
-        // 快速甩动：阈值从 140px 平滑降低到约 75px；
-        // 慢速拖动：保持较高阈值，避免轻轻拖一下就误触发。
-        const horizontalSpeedFactor = Math.max(0, Math.min(
-            (horizontalVelocity - SWIPE_SLOW_VELOCITY) /
-            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-        ));
-        const horizontalThreshold = SWIPE_MAX_THRESHOLD -
-            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * horizontalSpeedFactor;
-
-        const verticalSpeedFactor = Math.max(0, Math.min(
-            (verticalVelocity - SWIPE_SLOW_VELOCITY) /
-            (SWIPE_FAST_VELOCITY - SWIPE_SLOW_VELOCITY), 1
-        ));
-        const verticalThreshold = SWIPE_MAX_THRESHOLD -
-            (SWIPE_MAX_THRESHOLD - SWIPE_MIN_THRESHOLD) * verticalSpeedFactor;
-
-        const isVerticalSwipe =
-            currentY > verticalThreshold &&
-            currentY > Math.abs(currentX) * SWIPE_DIRECTION_CONFIDENCE;
-
-        const isHorizontalSwipe =
-            Math.abs(currentX) > horizontalThreshold &&
-            Math.abs(currentX) > Math.abs(currentY) * SWIPE_DIRECTION_CONFIDENCE;
-
-        if (swipeToggle.checked && isVerticalSwipe && historyStack.length > 0) {
+        if (swipeToggle.checked && (currentY > SWIPE_DOWN_THRESHOLD || fastSwipeDown) && Math.abs(currentX) < 60 && historyStack.length > 0) {
             undoLastAction();
             return;
         }
 
-        if (swipeToggle.checked && isHorizontalSwipe && currentX > 0) {
+        if (swipeToggle.checked && (currentX > SWIPE_THRESHOLD || fastSwipeRight)) {
             handleSwipe('right');
-        } else if (swipeToggle.checked && isHorizontalSwipe && currentX < 0) {
+        } else if (swipeToggle.checked && (currentX < -SWIPE_THRESHOLD || fastSwipeLeft)) {
             handleSwipe('left');
         } else {
             resetCardPosition();
@@ -763,6 +753,7 @@
         
         clearBadgeStatesWithTransition();
 
+        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6'; 
         nextCard.style.filter = 'blur(1px)';
@@ -907,12 +898,13 @@
 
         const cardInner = currentCard.querySelector('.card-inner');
         if (cardInner) {
-            // 换卡时只禁用“复位动画”，强制重排后立即恢复 CSS 动画。
-            // 不再使用 setTimeout，避免首次点击落在 transition:none 窗口内。
-            cardInner.classList.add('flip-no-transition');
+            cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            void cardInner.offsetWidth;
-            cardInner.classList.remove('flip-no-transition');
+            cardInner.offsetHeight; // 强制重排
+            
+            setTimeout(() => {
+                cardInner.style.transition = '';
+            }, 30);
         }
         isFlipped = false;
 
