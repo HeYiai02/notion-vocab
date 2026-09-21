@@ -150,7 +150,6 @@
         }
         .start-btn:active { opacity: 0.85; }
 
-        /* 关键优化：允许自由延伸，不硬切卡片边框与阴影 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
             flex-direction: column; align-items: center;
@@ -178,23 +177,21 @@
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            /* 优化翻面动画为 iOS 级高级阻尼曲线 */
             transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
             -webkit-transform-style: preserve-3d; border-radius: 20px; will-change: transform;
-            transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg); 
-            -webkit-transform: translateZ(0) rotateX(0.01deg) rotateY(0.01deg);
+            transform: translateZ(0); -webkit-transform: translateZ(0);
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
         .card-face {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            -webkit-backface-visibility: hidden !important; backface-visibility: hidden !important;
+            /* 👈 绝杀黑科技：完全摒弃 backface-visibility，利用 3D Z轴物理遮挡完美解决 iOS 首帧渲染惰性 */
             background: var(--card-bg); border-radius: 20px; display: flex; flex-direction: column;
             justify-content: center; align-items: center; padding: 24px; box-sizing: border-box; text-align: center;
-            will-change: transform;
             -webkit-transform-style: preserve-3d;
             transform-style: preserve-3d;
         }
+        /* 前面放置在 Z=1px，转过去后自动被放置在 Z=1px 翻过来的背面物理遮挡 */
         .card-front { transform: rotateY(0deg) translateZ(1px); -webkit-transform: rotateY(0deg) translateZ(1px); }
         .card-back { transform: rotateY(180deg) translateZ(1px); -webkit-transform: rotateY(180deg) translateZ(1px); }
         .card-animate { transition: transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease; }
@@ -273,7 +270,7 @@
     <!-- 2. 标题正上方的模式状态与解锁按钮 -->
     <div class="auth-bar">
         <span id="role-badge" class="role-badge">👤 游客模式</span>
-        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 输入密码</button>
+        <button id="auth-btn" class="auth-btn" onclick="toggleAuthModal()">🔐 解锁同步</button>
     </div>
 
     <!-- 3. 主标题 -->
@@ -600,6 +597,7 @@
         resetDragState();
         isDragging = true;
         
+        // 兼容 touches 数组
         startX = e.touches ? e.touches[0].clientX : e.clientX; 
         startY = e.touches ? e.touches[0].clientY : e.clientY; 
         downTarget = e.target;
@@ -609,7 +607,6 @@
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
         currentCard.offsetHeight; 
-        
         clearBadgeStatesInstant();
     }
 
@@ -847,7 +844,7 @@
         if (cardInner) {
             cardInner.style.transition = 'none';
             currentCard.classList.remove('is-flipped');
-            cardInner.offsetHeight; 
+            cardInner.offsetHeight; // 强制重排
             
             setTimeout(() => {
                 cardInner.style.transition = '';
@@ -872,19 +869,24 @@
 
         const word = dueList[currentIndex];
         
-        document.getElementById('front-en').innerText = word.en;
-        document.getElementById('back-en').innerText = word.en;
+        // 👈 【核心修复1】：彻底防御底层空数据报错，解决卡片虚化卡死问题
+        const enText = word.en || "";
+        const zhText = word.zh || "";
+        const subText = word.sub || "";
+
+        document.getElementById('front-en').innerText = enText;
+        document.getElementById('back-en').innerText = enText;
         
         const backZh = document.getElementById('back-zh');
-        backZh.innerText = word.zh;
+        backZh.innerText = zhText;
         
-        if (word.zh.length > 50) { backZh.style.fontSize = "15px"; }
-        else if (word.zh.length > 25) { backZh.style.fontSize = "17px"; }
+        if (zhText.length > 50) { backZh.style.fontSize = "15px"; }
+        else if (zhText.length > 25) { backZh.style.fontSize = "17px"; }
         else { backZh.style.fontSize = "20px"; }
 
-        backZh.onclick = (e) => { e.stopPropagation(); if (word.zh) openModal(word.en, word.zh); };
+        backZh.onclick = (e) => { e.stopPropagation(); if (zhText) openModal(enText, zhText); };
 
-        document.getElementById('back-sub').innerText = word.sub;
+        document.getElementById('back-sub').innerText = subText;
         
         const frontPhonetic = document.getElementById('front-phonetic');
         const backPhonetic = document.getElementById('back-phonetic');
@@ -894,19 +896,15 @@
         
         updateProgress();
         updateUndoButtonState();
-
-        // 👈 【核心黑科技：解决首帧翻页卡顿】
-        // 在填入文字后，立刻在不可见状态下瞬间翻转并恢复，迫使 Safari GPU 立即绘制背面纹理！
-        currentCard.classList.add('is-flipped');
-        currentCard.offsetHeight; // 强制 GPU 绘制背面
-        currentCard.classList.remove('is-flipped');
-        currentCard.offsetHeight; // 恢复正面
         
         currentCard.style.transition = ''; 
+        currentCard.classList.remove('card-animate');
+        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+        currentCard.style.opacity = '1';
 
         if (currentIndex + 1 < dueList.length) {
             const nextWord = dueList[currentIndex + 1];
-            document.getElementById('next-en').innerText = nextWord.en;
+            document.getElementById('next-en').innerText = nextWord.en || "";
             document.getElementById('next-phonetic').innerText = nextWord.phonetic ? `[${nextWord.phonetic.replace(/\//g, '')}]` : "";
         } else {
             document.getElementById('next-en').innerText = "已经是最后一张啦 🎉";
