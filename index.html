@@ -75,27 +75,28 @@
 
         .card-stack { position: relative; width: 100%; height: 420px; perspective: 1200px; margin-top: 10px; touch-action: none; }
         
+        /* 核心重构：卡片物理独立，不共用 */
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
             border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
             box-sizing: border-box; user-select: none; touch-action: none; border: none !important; outline: 1px solid transparent;
-            will-change: transform, opacity, filter; /* 👈 GPU加速常驻，绝不销毁 */
+            /* 永远保留 GPU 加速，杜绝掉帧 */
+            will-change: transform, opacity;
+            transform-style: preserve-3d; -webkit-transform-style: preserve-3d;
         }
-        .card-next {
-            z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
-            display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 24px; text-align: center;
-        }
-        .card-current { z-index: 2; cursor: grab; transform-style: preserve-3d; -webkit-transform-style: preserve-3d; }
-        .card-current:active { cursor: grabbing; }
+
+        .z-top { z-index: 2; cursor: grab; }
+        .z-top:active { cursor: grabbing; }
+        .z-bottom { z-index: 1; pointer-events: none; } /* 备胎卡片禁止触摸 */
 
         .card-inner {
             position: relative; width: 100%; height: 100%; text-align: center;
-            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1); transform-style: preserve-3d;
-            -webkit-transform-style: preserve-3d; border-radius: 20px; 
-            transform: translateZ(0); -webkit-transform: translateZ(0);
-            will-change: transform; /* 👈 预热3D翻转管线，解决第一张掉帧 */
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); 
+            transform-style: preserve-3d; -webkit-transform-style: preserve-3d; 
+            border-radius: 20px; transform: translateZ(0); -webkit-transform: translateZ(0);
         }
-        .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
+        
+        .is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
         .card-face {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -174,36 +175,54 @@
     </div>
 
     <div id="flashcard-container">
+        <!-- Tinder 式双卡片引擎 -->
         <div class="card-stack" id="card-stack">
-            <div class="card card-next" id="next-card">
-                <div class="word-en" id="next-en">Loading...</div>
-                <div class="word-phonetic" id="next-phonetic"></div>
-            </div>
             
-            <div class="card card-current" id="current-card">
-                <div class="swipe-badge badge-remember" id="badge-remember">记住 🟢</div>
-                <div class="swipe-badge badge-forgot" id="badge-forgot">忘记 🔴</div>
-                <div class="swipe-badge badge-undo" id="badge-undo">撤回 ↺</div>
-
+            <!-- 初始底层备胎卡片 -->
+            <div class="card z-bottom" id="card-b" style="transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);">
+                <div class="swipe-badge badge-remember">记住 🟢</div>
+                <div class="swipe-badge badge-forgot">忘记 🔴</div>
+                <div class="swipe-badge badge-undo">撤回 ↺</div>
                 <div class="card-inner">
                     <div class="card-face card-front">
-                        <div class="word-en" id="front-en"></div>
-                        <div class="word-phonetic" id="front-phonetic"></div>
-                        <div class="tap-hint" id="tap-hint-text">👈 左滑忘记 | <span style="color:var(--primary);">点击单词发音</span> | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(点击空白处翻面 / 下滑撤回上一个词)</span></div>
+                        <div class="word-en front-en"></div>
+                        <div class="word-phonetic front-phonetic"></div>
+                        <div class="tap-hint">👈 左滑忘记 | <span style="color:var(--primary);">点击发音</span> | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(点击空白翻面 / 下滑撤回)</span></div>
                     </div>
                     <div class="card-face card-back">
-                        <div class="word-en" id="back-en"></div>
-                        <div class="word-phonetic" id="back-phonetic"></div>
-                        <div class="word-zh" id="back-zh" title="点击查看完整释义"></div>
-                        <div class="word-sub" id="back-sub"></div>
+                        <div class="word-en back-en"></div>
+                        <div class="word-phonetic back-phonetic"></div>
+                        <div class="word-zh back-zh"></div>
+                        <div class="word-sub back-sub"></div>
                     </div>
                 </div>
             </div>
+            
+            <!-- 初始顶层活跃卡片 -->
+            <div class="card z-top" id="card-a" style="transform: scale(1) translateY(0px); opacity: 1; filter: blur(0px);">
+                <div class="swipe-badge badge-remember">记住 🟢</div>
+                <div class="swipe-badge badge-forgot">忘记 🔴</div>
+                <div class="swipe-badge badge-undo">撤回 ↺</div>
+                <div class="card-inner">
+                    <div class="card-face card-front">
+                        <div class="word-en front-en"></div>
+                        <div class="word-phonetic front-phonetic"></div>
+                        <div class="tap-hint">👈 左滑忘记 | <span style="color:var(--primary);">点击发音</span> | 右滑记住 👉<br><span style="font-size:11px; opacity:0.8;">(点击空白翻面 / 下滑撤回)</span></div>
+                    </div>
+                    <div class="card-face card-back">
+                        <div class="word-en back-en"></div>
+                        <div class="word-phonetic back-phonetic"></div>
+                        <div class="word-zh back-zh"></div>
+                        <div class="word-sub back-sub"></div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <div id="action-buttons">
-            <button class="action-btn btn-forgot" id="btn-forgot" onclick="triggerSwipe('left')">忘记了 🔴</button>
-            <button class="action-btn btn-remember" id="btn-remember" onclick="triggerSwipe('right')">记住了 🟢</button>
+            <button class="action-btn btn-forgot" onclick="triggerSwipe('left')">忘记了 🔴</button>
+            <button class="action-btn btn-remember" onclick="triggerSwipe('right')">记住了 🟢</button>
         </div>
 
         <button class="cambridge-btn" onclick="openCambridgeDict()">
@@ -240,22 +259,20 @@
     let masteredCount = 0;
     let historyStack = [];
 
-    // 手势记录引擎变量
+    // 双卡片轮替核心变量
+    let activeCard = document.getElementById('card-a');
+    let bgCard = document.getElementById('card-b');
+
     let startX = 0, startY = 0;
     let currentX = 0, currentY = 0;
     let isDragging = false;
     let isAnimating = false;
     let downTarget = null;
-    let isTouchEngine = false; // 用于彻底阻断 Touch/Pointer 双重发包冲突
+    let isTouchEngine = false;
     
     const SWIPE_THRESHOLD = 90;
     const SWIPE_DOWN_THRESHOLD = 100;
 
-    const currentCard = document.getElementById('current-card');
-    const nextCard = document.getElementById('next-card');
-    const badgeRemember = document.getElementById('badge-remember');
-    const badgeForgot = document.getElementById('badge-forgot');
-    const badgeUndo = document.getElementById('badge-undo');
     const swipeToggle = document.getElementById('swipe-toggle');
     const undoBtn = document.getElementById('undo-btn');
 
@@ -263,19 +280,15 @@
         const roleBadge = document.getElementById('role-badge');
         const authBtn = document.getElementById('auth-btn');
         if (!isVisitorMode) {
-            if (roleBadge) {
-                roleBadge.innerText = '⚡ 同步模式';
-                roleBadge.style.background = 'rgba(52, 199, 89, 0.15)';
-                roleBadge.style.color = '#34C759';
-            }
-            if (authBtn) authBtn.innerText = '🔒 退出';
+            roleBadge.innerText = '⚡ 同步模式';
+            roleBadge.style.background = 'rgba(52, 199, 89, 0.15)';
+            roleBadge.style.color = '#34C759';
+            authBtn.innerText = '🔒 退出';
         } else {
-            if (roleBadge) {
-                roleBadge.innerText = '👤 游客模式';
-                roleBadge.style.background = '#E5E5EA';
-                roleBadge.style.color = '#8E8E93';
-            }
-            if (authBtn) authBtn.innerText = '🔐 解锁同步';
+            roleBadge.innerText = '👤 游客模式';
+            roleBadge.style.background = '#E5E5EA';
+            roleBadge.style.color = '#8E8E93';
+            authBtn.innerText = '🔐 解锁同步';
         }
     }
 
@@ -283,14 +296,10 @@
         if (!isVisitorMode) {
             if (confirm("确定要退出管理员模式，切换回游客模式吗？")) {
                 sessionStorage.removeItem('user_password');
-                userPassword = '';
-                isVisitorMode = true;
-                updateRoleUI();
-                location.reload();
+                userPassword = ''; isVisitorMode = true; updateRoleUI(); location.reload();
             }
             return;
         }
-
         const input = prompt("请输入管理员密码：");
         if (input === null || input.trim() === '') return;
         const password = input.trim();
@@ -301,21 +310,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ password: password })
             });
-
             const data = await res.json();
             if (res.ok && data.success) {
-                userPassword = password;
-                sessionStorage.setItem('user_password', userPassword);
-                isVisitorMode = false;
-                updateRoleUI();
-                alert("✅ 密码正确！已解锁同步模式，页面将加载您今日的艾宾浩斯复习任务。");
-                location.reload();
-            } else {
-                alert("❌ " + (data.error || "密码错误，解锁失败！"));
-            }
-        } catch (err) {
-            alert("❌ 验证失败，请检查网络或确认部署平台是否配置了 AUTH_PASSWORD 环境变量。");
-        }
+                userPassword = password; sessionStorage.setItem('user_password', userPassword);
+                isVisitorMode = false; updateRoleUI(); alert("✅ 密码正确！"); location.reload();
+            } else { alert("❌ " + (data.error || "密码错误")); }
+        } catch (err) { alert("❌ 验证失败，请检查网络。"); }
     }
 
     window.addEventListener('DOMContentLoaded', () => { updateRoleUI(); });
@@ -332,38 +332,28 @@
 
     function incrementTodayCompleted() {
         if (isVisitorMode) return; 
-        const count = getTodayCompletedCount() + 1;
-        localStorage.setItem('review_completed_count', count.toString());
+        localStorage.setItem('review_completed_count', (getTodayCompletedCount() + 1).toString());
     }
 
     function decrementTodayCompleted() {
         if (isVisitorMode) return;
-        const count = Math.max(0, getTodayCompletedCount() - 1);
-        localStorage.setItem('review_completed_count', count.toString());
+        localStorage.setItem('review_completed_count', Math.max(0, getTodayCompletedCount() - 1).toString());
     }
 
     function updateProgress() {
         const percent = initialTotal > 0 ? (masteredCount / initialTotal) * 100 : 0;
-        const fillEl = document.getElementById('progress-bar-fill');
-        if (fillEl) fillEl.style.width = `${percent}%`;
+        document.getElementById('progress-bar-fill').style.width = `${percent}%`;
     }
 
     function updateUndoButtonState() {
-        if (historyStack.length > 0 && currentIndex < dueList.length) {
-            undoBtn.classList.add('active');
-        } else {
-            undoBtn.classList.remove('active');
-        }
+        if (historyStack.length > 0 && currentIndex < dueList.length) { undoBtn.classList.add('active'); } 
+        else { undoBtn.classList.remove('active'); }
     }
 
     function openCambridgeDict() {
         if (currentIndex >= dueList.length) return;
         const word = dueList[currentIndex];
-        if (word && word.en) {
-            const encodedWord = encodeURIComponent(word.en.trim());
-            const url = `https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${encodedWord}`;
-            window.open(url, '_blank');
-        }
+        if (word && word.en) { window.open(`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${encodeURIComponent(word.en.trim())}`, '_blank'); }
     }
 
     window.onload = async () => {
@@ -377,33 +367,25 @@
             const todayCompleted = getTodayCompletedCount();
             const totalCount = remainingCount + todayCompleted;
 
-            const dueWordsEl = document.getElementById('due-words');
-            const dashboardInfoEl = document.getElementById('dashboard-info');
-            
-            if (dueWordsEl && dashboardInfoEl) {
-                if (isVisitorMode) {
-                    dashboardInfoEl.innerText = "👤 游客体验卡组 (全库切片盲盒)";
-                    dueWordsEl.innerText = `${remainingCount} 词`;
-                } else if (totalCount === 0) {
-                    dashboardInfoEl.innerText = "今日任务状态";
-                    dueWordsEl.innerText = "🎉 无待复习单词";
-                } else {
-                    dashboardInfoEl.innerText = `今日待复习 (已完成 ${todayCompleted}/${totalCount})`;
-                    dueWordsEl.innerText = `${remainingCount} 词`;
-                }
+            if (isVisitorMode) {
+                document.getElementById('dashboard-info').innerText = "👤 游客体验卡组";
+                document.getElementById('due-words').innerText = `${remainingCount} 词`;
+            } else if (totalCount === 0) {
+                document.getElementById('dashboard-info').innerText = "今日任务状态";
+                document.getElementById('due-words').innerText = "🎉 无待复习单词";
+            } else {
+                document.getElementById('dashboard-info').innerText = `今日待复习 (已完成 ${todayCompleted}/${totalCount})`;
+                document.getElementById('due-words').innerText = `${remainingCount} 词`;
             }
 
             document.getElementById('loading').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
 
             if (dueList.length === 0) {
-                document.getElementById('start-btn').innerText = isVisitorMode ? "词库为空，请检查 Notion 配置" : "任务已完成，太棒了！";
+                document.getElementById('start-btn').innerText = isVisitorMode ? "词库为空" : "任务已完成！";
                 document.getElementById('start-btn').disabled = true;
             }
-
-        } catch (err) {
-            document.getElementById('loading').innerText = "获取数据失败，请检查配置。";
-        }
+        } catch (err) { document.getElementById('loading').innerText = "获取数据失败，请检查配置。"; }
     }
 
     function openModal(wordEn, wordZh) {
@@ -416,14 +398,10 @@
 
     swipeToggle.addEventListener('change', () => {
         const actionBtns = document.getElementById('action-buttons');
-        const hintText = document.getElementById('tap-hint-text');
-
         if (swipeToggle.checked) {
             if (actionBtns) actionBtns.style.display = 'none';
-            if (hintText) hintText.innerHTML = "👈 左滑忘记 | <span style='color:var(--primary);'>点击单词发音</span> | 右滑记住 👉<br><span style='font-size:11px; opacity:0.8;'>(点击空白处翻面 / 下滑撤回上一个词)</span>";
         } else {
             if (actionBtns) actionBtns.style.display = 'flex';
-            if (hintText) hintText.innerText = "点击单词发音 | 点击空白查看释义（请使用下方按钮操作）";
         }
     });
 
@@ -445,7 +423,7 @@
         
         initSwipeEvents();
         updateProgress();
-        showCard();
+        renderCards(); // 初始化双卡片数据
     });
 
     function playVoice() {
@@ -453,17 +431,14 @@
         if (!word || !word.en) return;
         if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
         currentAudio = new Audio(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word.en)}&type=2`);
-        currentAudio.play().catch(err => { console.error("音频播放被拦截或失败:", err); });
-    }
-
-    function resetDragState() {
-        isDragging = false;
-        startX = 0; startY = 0; currentX = 0; currentY = 0;
+        currentAudio.play().catch(err => console.error("音频播放被拦截:", err));
     }
 
     function initSwipeEvents() {
-        currentCard.addEventListener('pointerdown', onPointerDown);
-        currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
+        // 事件委托给整个卡片栈容器
+        const stack = document.getElementById('card-stack');
+        stack.addEventListener('pointerdown', onPointerDown);
+        stack.addEventListener('touchstart', onPointerDown, { passive: true });
         
         document.addEventListener('pointermove', onPointerMove);
         document.addEventListener('touchmove', onPointerMove, { passive: false });
@@ -480,39 +455,45 @@
         return { x: e.clientX, y: e.clientY };
     }
 
+    function setBadge(card, type, opacity) {
+        const b = card.querySelector(`.badge-${type}`);
+        if(b) b.style.opacity = opacity.toString();
+    }
+    
+    function clearBadges(card, transition = 'none') {
+        ['remember', 'forgot', 'undo'].forEach(type => {
+            const b = card.querySelector(`.badge-${type}`);
+            if (b) { b.style.transition = transition; b.style.opacity = '0'; }
+        });
+    }
+
     function onPointerDown(e) {
         if (e.type.includes('touch')) isTouchEngine = true;
         if (e.type.includes('pointer') && isTouchEngine) return;
-
         if (currentIndex >= dueList.length || isAnimating) return;
-        if (e.target.closest('#back-zh')) return;
         
-        resetDragState();
+        // 确保只能拖动顶层卡片
+        if (!e.target.closest('.z-top')) return;
+        if (e.target.closest('.back-zh')) return;
+        
         isDragging = true;
-        
         const coords = getCoords(e);
-        startX = coords.x; 
-        startY = coords.y; 
+        startX = coords.x; startY = coords.y; 
+        currentX = 0; currentY = 0;
         downTarget = e.target;
 
-        if (e.type.includes('pointer')) {
-            try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
-        }
+        if (e.type.includes('pointer')) { try { activeCard.setPointerCapture(e.pointerId); } catch(err) {} }
         
-        // 👈 【彻底切断前置干扰】：手指接触屏幕瞬间，强制剥夺所有过渡动画，实现0延迟跟手！
-        currentCard.style.transition = 'none';
-        nextCard.style.transition = 'none'; 
-        
-        clearBadgeStatesInstant();
+        // 瞬间剥离物理动画，实现零延迟跟手
+        activeCard.style.transition = 'none';
+        bgCard.style.transition = 'none'; 
+        clearBadges(activeCard, 'none');
     }
 
     function onPointerMove(e) {
         if (e.type.includes('pointer') && isTouchEngine) return;
         if (!isDragging || isAnimating) return;
-        
-        if (e.type === 'touchmove' && swipeToggle.checked) {
-            e.preventDefault(); 
-        }
+        if (e.type === 'touchmove' && swipeToggle.checked) e.preventDefault(); 
         
         const coords = getCoords(e);
         currentX = coords.x - startX; 
@@ -521,34 +502,30 @@
         if (!swipeToggle.checked) return;
         
         if (currentY > 30 && Math.abs(currentX) < Math.abs(currentY) && historyStack.length > 0) {
-            currentCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
-            badgeUndo.style.opacity = Math.min((currentY - 30) / 50, 1).toString();
-            badgeRemember.style.opacity = '0'; 
-            badgeForgot.style.opacity = '0';
+            activeCard.style.transform = `translate3d(0, ${currentY}px, 0)`;
+            setBadge(activeCard, 'undo', Math.min((currentY - 30) / 50, 1));
+            setBadge(activeCard, 'remember', 0); setBadge(activeCard, 'forgot', 0);
             return;
         }
 
         const rotate = currentX * 0.08;
         const opacity = Math.max(0, 1 - Math.abs(currentX) / 320);
-        currentCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
-        currentCard.style.opacity = opacity.toString();
+        activeCard.style.transform = `translate3d(${currentX}px, ${currentY * 0.2}px, 0) rotate(${rotate}deg)`;
+        activeCard.style.opacity = opacity.toString();
 
-        badgeUndo.style.opacity = '0';
+        setBadge(activeCard, 'undo', 0);
         if (currentX > 20) {
-            badgeRemember.style.opacity = Math.min((currentX - 20) / 60, 1).toString();
-            badgeForgot.style.opacity = '0';
+            setBadge(activeCard, 'remember', Math.min((currentX - 20) / 60, 1)); setBadge(activeCard, 'forgot', 0);
         } else if (currentX < -20) {
-            badgeForgot.style.opacity = Math.min((-currentX - 20) / 60, 1).toString();
-            badgeRemember.style.opacity = '0';
+            setBadge(activeCard, 'forgot', Math.min((-currentX - 20) / 60, 1)); setBadge(activeCard, 'remember', 0);
         } else {
-            badgeRemember.style.opacity = '0'; 
-            badgeForgot.style.opacity = '0';
+            setBadge(activeCard, 'remember', 0); setBadge(activeCard, 'forgot', 0);
         }
 
         const progress = Math.min(Math.abs(currentX) / SWIPE_THRESHOLD, 1);
-        nextCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
-        nextCard.style.opacity = (0.6 + 0.4 * progress).toString();
-        nextCard.style.filter = `blur(${1 - progress}px)`;
+        bgCard.style.transform = `scale(${0.92 + 0.08 * progress}) translateY(${15 - 15 * progress}px)`;
+        bgCard.style.opacity = (0.6 + 0.4 * progress).toString();
+        bgCard.style.filter = `blur(${1 - progress}px)`;
     }
 
     function onPointerUp(e) {
@@ -556,23 +533,17 @@
         if (!isDragging) return;
         isDragging = false;
 
-        if (e.type.includes('pointer')) {
-            try { if (currentCard.hasPointerCapture(e.pointerId)) currentCard.releasePointerCapture(e.pointerId); } catch(err) {}
-        }
+        if (e.type.includes('pointer')) { try { if (activeCard.hasPointerCapture(e.pointerId)) activeCard.releasePointerCapture(e.pointerId); } catch(err) {} }
 
         const distance = Math.hypot(currentX, currentY);
 
         if (distance < 8) {
-            // 👈 【翻面极简拦截】：点击时，仅快速重置外层容器的位移，绝不干涉内层 3D 反转
-            currentCard.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
-            currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-            clearBadgeStatesInstant();
+            activeCard.style.transition = 'transform 0.3s cubic-bezier(0.25, 1, 0.5, 1)';
+            activeCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+            clearBadges(activeCard, 'none');
             
-            if (downTarget && downTarget.closest('.word-en')) {
-                playVoice();
-            } else {
-                toggleFlip();
-            }
+            if (downTarget && downTarget.closest('.word-en')) { playVoice(); } 
+            else { toggleFlip(); }
             downTarget = null;
             return;
         }
@@ -589,27 +560,23 @@
         } else if (swipeToggle.checked && currentX < -SWIPE_THRESHOLD) {
             handleSwipe('left');
         } else {
-            resetCardPosition();
+            // 松手回弹
+            activeCard.style.transition = 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease';
+            activeCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+            activeCard.style.opacity = '1';
+            clearBadges(activeCard, 'opacity 0.2s ease');
+
+            bgCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
+            bgCard.style.transform = 'scale(0.92) translateY(15px)';
+            bgCard.style.opacity = '0.6'; 
+            bgCard.style.filter = 'blur(1px)';
         }
-    }
-
-    function resetCardPosition() {
-        // 松手复位动画由 JS 按需注入
-        currentCard.style.transition = 'transform 0.45s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease';
-        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-        currentCard.style.opacity = '1';
-        
-        clearBadgeStatesWithTransition();
-
-        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
-        nextCard.style.transform = 'scale(0.92) translateY(15px)';
-        nextCard.style.opacity = '0.6'; 
-        nextCard.style.filter = 'blur(1px)';
     }
 
     function toggleFlip() {
         isFlipped = !isFlipped;
-        if (isFlipped) { currentCard.classList.add('is-flipped'); } else { currentCard.classList.remove('is-flipped'); }
+        if (isFlipped) { activeCard.classList.add('is-flipped'); } 
+        else { activeCard.classList.remove('is-flipped'); }
     }
 
     function triggerSwipe(direction) {
@@ -622,40 +589,50 @@
         const isRemembered = direction === 'right';
         const flyX = isRemembered ? 500 : -500;
         
-        if (isRemembered) { badgeRemember.style.opacity = '1'; } else { badgeForgot.style.opacity = '1'; }
+        if (isRemembered) setBadge(activeCard, 'remember', 1);
+        else setBadge(activeCard, 'forgot', 1);
 
-        // 卡片飞走及底部卡片浮现过渡注入
-        currentCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
-        currentCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
-        currentCard.style.opacity = '0';
+        activeCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
+        activeCard.style.transform = `translate3d(${flyX}px, 0, 0) rotate(${flyX * 0.05}deg)`;
+        activeCard.style.opacity = '0';
 
-        nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
-        nextCard.style.transform = 'scale(1) translateY(0px)';
-        nextCard.style.opacity = '1'; 
-        nextCard.style.filter = 'blur(0px)';
+        bgCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
+        bgCard.style.transform = 'scale(1) translateY(0px)';
+        bgCard.style.opacity = '1'; 
+        bgCard.style.filter = 'blur(0px)';
 
         processAnswerAsync(isRemembered);
 
+        // 400ms 动画结束后，执行 DOM 身份轮换！
         setTimeout(() => {
             currentIndex++;
-            clearBadgeStatesInstant();
-            showCard();
+            
+            // 1. 物理身份互换
+            let temp = activeCard;
+            activeCard = bgCard;
+            bgCard = temp;
+
+            // 2. 将旧的 activeCard 瞬间重置为底层的备胎属性（此时它在幕后，怎么瞬移都不会卡）
+            bgCard.style.transition = 'none';
+            bgCard.style.transform = 'scale(0.92) translateY(15px)';
+            bgCard.style.opacity = '0.6';
+            bgCard.style.filter = 'blur(1px)';
+            bgCard.classList.remove('is-flipped');
+            clearBadges(bgCard, 'none');
+            
+            // 3. 更新 Z-Index 层级
+            activeCard.classList.remove('z-bottom');
+            activeCard.classList.add('z-top');
+            bgCard.classList.remove('z-top');
+            bgCard.classList.add('z-bottom');
+
+            isFlipped = false;
+            
+            // 4. 将新数据填入各自的卡片
+            renderCards();
+            
             isAnimating = false;
         }, 400);
-    }
-
-    function clearBadgeStatesInstant() {
-        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
-            b.style.transition = 'none';
-            b.style.opacity = '0';
-        });
-    }
-
-    function clearBadgeStatesWithTransition() {
-        [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
-            b.style.transition = 'opacity 0.2s ease';
-            b.style.opacity = '0';
-        });
     }
 
     function processAnswerAsync(isRemembered) {
@@ -667,31 +644,19 @@
         let newLevel;
         if (isRemembered) {
             newLevel = Math.min(word.level + 1, INTERVALS.length - 1);
-            incrementTodayCompleted();
-            masteredCount++;
-            updateProgress();
+            incrementTodayCompleted(); masteredCount++; updateProgress();
         } else {
-            newLevel = 0;
-            dueList.push({ ...word, level: 0 });
+            newLevel = 0; dueList.push({ ...word, level: 0 });
         }
 
-        if (isVisitorMode) { return; }
-
-        const daysToAdd = INTERVALS[newLevel];
-        const nextDate = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
-        const nextReviewDate = nextDate.toISOString().split('T')[0];
-
+        if (isVisitorMode) return;
+        const nextDate = new Date(Date.now() + INTERVALS[newLevel] * 24 * 60 * 60 * 1000);
+        
         fetch('/api/update_word', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-Auth-Password': userPassword },
-            body: JSON.stringify({ pageId: word.pageId, newLevel: newLevel, nextReviewDate: nextReviewDate })
-        }).then(res => {
-            if (res.status === 403) {
-                alert("密码错误或权限失效，已自动恢复为游客模式！");
-                sessionStorage.removeItem('user_password');
-                userPassword = ''; isVisitorMode = true; updateRoleUI();
-            }
-        }).catch(err => { console.error(`后台写入 Notion 失败:`, err); });
+            body: JSON.stringify({ pageId: word.pageId, newLevel: newLevel, nextReviewDate: nextDate.toISOString().split('T')[0] })
+        }).catch(err => console.error(`写入 Notion 失败:`, err));
     }
 
     function undoLastAction() {
@@ -700,130 +665,91 @@
         const last = historyStack.pop();
 
         if (last.isRemembered) {
-            decrementTodayCompleted();
-            masteredCount = Math.max(0, masteredCount - 1);
-        } else {
-            dueList.pop();
-        }
+            decrementTodayCompleted(); masteredCount = Math.max(0, masteredCount - 1);
+        } else { dueList.pop(); }
 
         currentIndex = last.index;
 
         if (!isVisitorMode) {
-            const todayStr = getTodayDateStr();
             fetch('/api/update_word', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Auth-Password': userPassword },
-                body: JSON.stringify({ pageId: last.word.pageId, newLevel: last.word.level, nextReviewDate: todayStr })
-            }).then(res => {
-                if (res.status === 403) {
-                    alert("密码错误或权限失效，已恢复游客模式！");
-                    sessionStorage.removeItem('user_password');
-                    userPassword = ''; isVisitorMode = true; updateRoleUI();
-                }
-            }).catch(err => { console.error(`后台撤回恢复失败:`, err); });
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Auth-Password': userPassword },
+                body: JSON.stringify({ pageId: last.word.pageId, newLevel: last.word.level, nextReviewDate: getTodayDateStr() })
+            }).catch(err => console.error(`撤回失败:`, err));
         }
 
-        clearBadgeStatesInstant();
-        
-        showCard(); // 这会自动把 currentCard 置于 0,0 坐标
+        // 撤回视觉逻辑：当前卡片退回底层，备胎卡片从天而降
+        activeCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
+        activeCard.style.transform = 'scale(0.92) translateY(15px)';
+        activeCard.style.opacity = '0.6';
+        activeCard.style.filter = 'blur(1px)';
+        activeCard.classList.remove('is-flipped');
 
-        // 利用 JS 强行覆盖上方 showCard 的复位，设置一个由天而降的初始坐标
-        currentCard.style.transition = 'none'; 
-        currentCard.style.transform = 'translate3d(0, -400px, 0) rotate(-10deg)';
-        currentCard.style.opacity = '0';
-        void currentCard.offsetWidth; // 强制浏览器提交这个初始坐标到渲染层
+        bgCard.style.transition = 'none';
+        bgCard.style.transform = 'translate3d(0, -400px, 0) rotate(-10deg)';
+        bgCard.style.opacity = '0';
+        bgCard.style.filter = 'blur(0px)';
+        bgCard.classList.remove('is-flipped');
+        clearBadges(bgCard, 'none');
 
-        // 执行空降进入动画
-        currentCard.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease';
-        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-        currentCard.style.opacity = '1';
+        // 角色互换
+        let temp = activeCard; activeCard = bgCard; bgCard = temp;
         
-        setTimeout(() => {
-            isAnimating = false;
-        }, 500);
+        activeCard.classList.remove('z-bottom'); activeCard.classList.add('z-top');
+        bgCard.classList.remove('z-top'); bgCard.classList.add('z-bottom');
+        
+        isFlipped = false;
+        renderCards();
+
+        void activeCard.offsetWidth; // 触发引擎，让天上的卡片落下来
+        activeCard.style.transition = 'transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease';
+        activeCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+        activeCard.style.opacity = '1';
+
+        setTimeout(() => { isAnimating = false; }, 500);
     }
 
-    function showCard() {
-        resetDragState();
-
-        // 👈 【无损翻转复位术】：为了不让用户看到翻回去的动画，这里瞬间消除 3D 面板的过渡属性后再复位
-        const cardInner = currentCard.querySelector('.card-inner');
-        if (cardInner && isFlipped) {
-            cardInner.style.transition = 'none';
-            currentCard.classList.remove('is-flipped');
-            void cardInner.offsetWidth; // 强制刷新
-            cardInner.style.transition = ''; // 闪电恢复，保证下一次点击翻面丝滑如初
-        } else {
-            currentCard.classList.remove('is-flipped');
-        }
-        isFlipped = false;
-        
-        // 【最纯粹的空间复位】：彻底杜绝上一个版本的 display 销毁导致手机掉帧
-        currentCard.style.transition = 'none';
-        currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-        currentCard.style.opacity = '1';
-        
-        clearBadgeStatesInstant();
-
+    function renderCards() {
         if (currentIndex >= dueList.length) {
             document.getElementById('flashcard-container').style.display = 'none';
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('dashboard').innerHTML = `
-                <div class="stats">
-                    <h2>🎉 太棒了！</h2>
-                    <p>卡组复习完成</p>
-                    <p style="margin-top:10px;">累计掌握: <strong>${masteredCount}</strong> 词</p>
-                </div>
+                <div class="stats"><h2>🎉 太棒了！</h2><p>卡组复习完成</p><p style="margin-top:10px;">累计掌握: <strong>${masteredCount}</strong> 词</p></div>
                 <button class="start-btn" onclick="location.reload()">重新加载</button>
             `;
-            updateUndoButtonState();
-            return;
+            updateUndoButtonState(); return;
         }
 
         const word = dueList[currentIndex];
-        
-        const enText = word.en || "";
-        const zhText = word.zh || "";
-        const subText = word.sub || "";
+        const nextWord = dueList[currentIndex + 1];
 
-        document.getElementById('front-en').innerText = enText;
-        document.getElementById('back-en').innerText = enText;
+        // 渲染顶层卡片 (activeCard)
+        activeCard.querySelector('.front-en').innerText = word.en || "";
+        activeCard.querySelector('.back-en').innerText = word.en || "";
+        const activeZh = activeCard.querySelector('.back-zh');
+        activeZh.innerText = word.zh || "";
+        if ((word.zh || "").length > 50) activeZh.style.fontSize = "15px";
+        else if ((word.zh || "").length > 25) activeZh.style.fontSize = "17px";
+        else activeZh.style.fontSize = "20px";
         
-        const backZh = document.getElementById('back-zh');
-        backZh.innerText = zhText;
-        
-        if (zhText.length > 50) { backZh.style.fontSize = "15px"; }
-        else if (zhText.length > 25) { backZh.style.fontSize = "17px"; }
-        else { backZh.style.fontSize = "20px"; }
+        // 绑定点击查看释义事件（只给当前层级绑定）
+        activeZh.onclick = (e) => { e.stopPropagation(); if (word.zh) openModal(word.en, word.zh); };
 
-        backZh.onclick = (e) => { e.stopPropagation(); if (zhText) openModal(enText, zhText); };
+        activeCard.querySelector('.back-sub').innerText = word.sub || "";
+        const pStr = word.phonetic ? `[${word.phonetic.replace(/\//g, '')}]` : "";
+        activeCard.querySelector('.front-phonetic').innerText = pStr;
+        activeCard.querySelector('.back-phonetic').innerText = pStr;
 
-        document.getElementById('back-sub').innerText = subText;
-        
-        const phoneticStr = word.phonetic ? `[${word.phonetic.replace(/\//g, '')}]` : "";
-        document.getElementById('front-phonetic').innerText = phoneticStr;
-        document.getElementById('back-phonetic').innerText = phoneticStr;
-        
-        updateProgress();
-        updateUndoButtonState();
-
-        if (currentIndex + 1 < dueList.length) {
-            const nextWord = dueList[currentIndex + 1];
-            document.getElementById('next-en').innerText = nextWord.en || "";
-            document.getElementById('next-phonetic').innerText = nextWord.phonetic ? `[${nextWord.phonetic.replace(/\//g, '')}]` : "";
+        // 渲染底层备胎卡片 (bgCard) - 提前准备好数据
+        if (nextWord) {
+            bgCard.querySelector('.front-en').innerText = nextWord.en || "";
+            bgCard.querySelector('.front-phonetic').innerText = nextWord.phonetic ? `[${nextWord.phonetic.replace(/\//g, '')}]` : "";
         } else {
-            document.getElementById('next-en').innerText = "已经是最后一张啦 🎉";
-            document.getElementById('next-phonetic').innerText = "";
+            bgCard.querySelector('.front-en').innerText = "已经是最后一张啦 🎉";
+            bgCard.querySelector('.front-phonetic').innerText = "";
         }
 
-        // 👈 【防打架终极隔离】：在展示期间绝不给底层卡片赋予 transition，确保下一张直接跟手
-        nextCard.style.transition = 'none';
-        nextCard.style.transform = 'scale(0.92) translateY(15px)';
-        nextCard.style.opacity = '0.6';
-        nextCard.style.filter = 'blur(1px)';
-        
-        // 渲染收尾
-        void currentCard.offsetWidth; 
+        updateProgress();
+        updateUndoButtonState();
     }
 
 </script>
