@@ -73,7 +73,6 @@
         .start-btn { display: inline-block; width: 100%; padding: 16px; background: var(--primary); color: white; border-radius: 12px; cursor: pointer; font-size: 18px; font-weight: bold; margin-top: 20px; border: none; box-shadow: 0 4px 12px rgba(0,122,255,0.25); transition: opacity 0.2s; }
         .start-btn:active { opacity: 0.85; }
 
-        /* 修改了容器属性，预热时能够平滑淡入 */
         #flashcard-container {
             display: none; width: 100%; max-width: 360px; margin-top: 10px;
             flex-direction: column; align-items: center; overflow: visible;
@@ -85,7 +84,9 @@
         .card {
             position: absolute; width: 100%; height: 100%; background: var(--card-bg);
             border-radius: 20px; box-shadow: 0 8px 30px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.03);
-            box-sizing: border-box; user-select: none; touch-action: none;
+            box-sizing: border-box; 
+            /* 👈 核心修复：彻底封杀系统级长按菜单与文字选中行为，防止手势被系统抢占 */
+            user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
         }
         .card-next {
             z-index: 1; transform: scale(0.92) translateY(15px); opacity: 0.6; filter: blur(1px);
@@ -100,7 +101,6 @@
         }
         .card-current.is-flipped .card-inner { transform: rotateY(180deg); -webkit-transform: rotateY(180deg); }
 
-        /* 回归最标准稳定的写法，摒弃一切冗杂黑科技 */
         .card-face {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             -webkit-backface-visibility: hidden !important; backface-visibility: hidden !important;
@@ -299,7 +299,6 @@
 
     function getTodayDateStr() { return new Date().toISOString().split('T')[0]; }
 
-    // 【修复进度条】：当访客模式时，完全隔离不读取、不写入 LocalStorage，每次刷新必归零
     function getTodayCompletedCount() {
         if (isVisitorMode) return 0; 
         
@@ -418,8 +417,7 @@
         
         const fcContainer = document.getElementById('flashcard-container');
         fcContainer.style.display = 'flex';
-        // 👉 将透明度设为接近不可见，准备进行“瞒天过海”的预渲染
-        fcContainer.style.opacity = '0.01'; 
+        fcContainer.style.opacity = '1';
         
         document.getElementById('progress-bar-container').style.display = 'block';
         document.getElementById('action-buttons').style.display = swipeToggle.checked ? 'none' : 'flex';
@@ -427,22 +425,6 @@
         initSwipeEvents();
         updateProgress();
         showCard();
-
-        // 👈 【核心方案：模拟操作预热 Safari GPU】
-        // 在填充完真实文字后，让机器快速替你翻转一次，强迫浏览器渲染背面纹理！
-        requestAnimationFrame(() => {
-            currentCard.style.transition = 'none';
-            currentCard.classList.add('is-flipped'); // 迅速翻面
-            
-            setTimeout(() => {
-                currentCard.classList.remove('is-flipped'); // 迅速翻回正面
-                
-                setTimeout(() => {
-                    // 两面都绘制完毕，此时再把卡片组平滑淡入给用户看
-                    fcContainer.style.opacity = '1';
-                }, 50);
-            }, 50);
-        });
     });
 
     function playVoice() {
@@ -460,14 +442,12 @@
     }
 
     function initSwipeEvents() {
+        // 👈 核心修复：移除所有 touch 事件，仅保留现代标准的 pointer 事件。
+        // 同时监听 touch 和 pointer 会导致事件成倍触发、计算翻倍、系统状态彻底错乱！
         currentCard.addEventListener('pointerdown', onPointerDown);
-        currentCard.addEventListener('touchstart', onPointerDown, { passive: true });
         document.addEventListener('pointermove', onPointerMove);
-        document.addEventListener('touchmove', onPointerMove, { passive: false });
         document.addEventListener('pointerup', onPointerUp);
-        document.addEventListener('touchend', onPointerUp);
         document.addEventListener('pointercancel', onPointerUp);
-        document.addEventListener('touchcancel', onPointerUp);
     }
 
     function onPointerDown(e) {
@@ -477,17 +457,15 @@
         resetDragState();
         isDragging = true;
         
-        startX = e.touches ? e.touches[0].clientX : e.clientX; 
-        startY = e.touches ? e.touches[0].clientY : e.clientY; 
+        startX = e.clientX; 
+        startY = e.clientY; 
         downTarget = e.target;
 
         try { currentCard.setPointerCapture(e.pointerId); } catch(err) {}
         
-        // 👈 【核心修复：彻底解除动画对 JS 拖拽的干扰，防止第二张阈值变短】
         currentCard.classList.remove('card-animate');
         currentCard.style.transition = 'none';
         
-        // 操作前绝对重置印章透明度，去除阻碍响应的 css transition
         [badgeRemember, badgeForgot, badgeUndo].forEach(b => {
             b.style.transition = 'none';
             b.style.opacity = '0';
@@ -497,8 +475,8 @@
     function onPointerMove(e) {
         if (!isDragging || isAnimating) return;
         
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const clientX = e.clientX;
+        const clientY = e.clientY;
         
         currentX = clientX - startX; 
         currentY = clientY - startY;
@@ -702,7 +680,6 @@
     function showCard() {
         resetDragState();
 
-        // 彻底清理 currentCard 上残留的所有属性，防止上一轮动画影响拖拽判定
         currentCard.style.transition = 'none';
         currentCard.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
         currentCard.style.opacity = '1';
@@ -734,7 +711,6 @@
 
         const word = dueList[currentIndex];
         
-        // 防崩溃防御：如果为 null，赋值空字符串
         const enText = word.en || "";
         const zhText = word.zh || "";
         const subText = word.sub || "";
@@ -769,17 +745,14 @@
             document.getElementById('next-phonetic').innerText = "";
         }
 
-        // 彻底重置 nextCard 状态
         nextCard.style.transition = 'none';
         nextCard.style.transform = 'scale(0.92) translateY(15px)';
         nextCard.style.opacity = '0.6';
         nextCard.style.filter = 'blur(1px)';
         
-        // 强制重排，让浏览器清醒一下
         currentCard.offsetHeight;
         nextCard.offsetHeight; 
 
-        // 安全恢复 Transition 过渡，避开同步卡顿
         setTimeout(() => {
             if (cardInner) cardInner.style.transition = '';
             nextCard.style.transition = 'transform 0.4s ease, opacity 0.4s ease, filter 0.4s ease';
